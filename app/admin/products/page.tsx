@@ -43,6 +43,8 @@ export default function AdminProductsPage() {
   const [form, setForm] = useState({ name: '', description: '', price: '', category: 'Dining Room', sub_category: '' })
   const [mainImage, setMainImage] = useState<File | null>(null)
   const [additionalImages, setAdditionalImages] = useState<File[]>([])
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null)
+  const [additionalImagePreviews, setAdditionalImagePreviews] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
@@ -61,6 +63,8 @@ export default function AdminProductsPage() {
   }
 
   const resetForm = () => {
+    setMainImagePreview(null)
+    setAdditionalImagePreviews([])
     setForm({ name: '', description: '', price: '', category: 'Dining Room', sub_category: '' })
     setMainImage(null); setAdditionalImages([]); setErrors([]);
     const fileInputs = document.querySelectorAll('input[type="file"]') as NodeListOf<HTMLInputElement>;
@@ -68,6 +72,7 @@ export default function AdminProductsPage() {
   }
 
   const uploadImage = async (file: File): Promise<string> => {
+
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random()}.${fileExt}`
     const { error } = await supabase.storage.from('product-images').upload(fileName, file)
@@ -75,6 +80,18 @@ export default function AdminProductsPage() {
     const { data } = supabase.storage.from('product-images').getPublicUrl(fileName)
     return data.publicUrl
   }
+
+
+  const handleMainImageChange = (file: File | null) => {
+  setMainImage(file)
+  setMainImagePreview(file ? URL.createObjectURL(file) : null)
+  setErrors(errors.filter(err => err !== 'mainImage'))
+}
+
+const handleAdditionalImagesChange = (files: File[]) => {
+  setAdditionalImages(files)
+  setAdditionalImagePreviews(files.map(file => URL.createObjectURL(file)))
+}
 
   const openEditModal = (product: Product) => {
     setEditingProduct(product)
@@ -210,26 +227,81 @@ export default function AdminProductsPage() {
                   <textarea className="w-full border p-3 border-gray-900 rounded-xl h-32 mt-1 outline-none focus:ring-2 focus:ring-amber-500" value={form.description} onChange={e => setForm({...form, description: e.target.value})} /></div>
                 </div>
 
-                <div className="space-y-6">
-                  <div><label className="text-xs font-bold text-amber-800 uppercase block mb-2">Select Sub-Category</label>
-                  <select className="w-full border p-3 border-gray-900 rounded-xl bg-white outline-none" value={form.sub_category} onChange={e => setForm({...form, sub_category: e.target.value})}>
-                    <option value="">Select Sub-Category...</option>
-                    {CATEGORY_MAP[form.category]?.map(sub => <option key={sub} value={sub}>{sub}</option>)}
-                  </select></div>
-                  
-                  <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
-                    <label className="text-xs font-bold text-amber-800 uppercase block mb-2">Change Main Image</label>
-                    <input type="file" className="w-full text-sm" onChange={e => setMainImage(e.target.files?.[0] || null)} />
-                  </div>
+<div className="space-y-6">
+  <div>
+    <label className="text-xs font-bold text-amber-800 uppercase block mb-2">
+      Select Sub-Category
+    </label>
+    <select
+      className="w-full border p-3 border-gray-900 rounded-xl bg-white outline-none"
+      value={form.sub_category}
+      onChange={e => setForm({ ...form, sub_category: e.target.value })}
+    >
+      <option value="">Select Sub-Category...</option>
+      {CATEGORY_MAP[form.category]?.map(sub => (
+        <option key={sub} value={sub}>{sub}</option>
+      ))}
+    </select>
+  </div>
 
-                  <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
-                    <label className="text-xs font-bold text-amber-800 uppercase block mb-2">Add New Gallery Images</label>
-                    <input type="file" multiple className="w-full text-sm" onChange={e => setAdditionalImages(Array.from(e.target.files || []))} />
-                    {editingProduct.additional_images?.length > 0 && (
-                        <p className="text-[10px] text-gray-500 mt-2 italic font-semibold uppercase">Current Gallery: {editingProduct.additional_images.length} images</p>
-                    )}
-                  </div>
-                </div>
+  <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
+    <label className="text-xs font-bold text-amber-800 uppercase block mb-2">
+      Change Main Image
+    </label>
+    <input
+      type="file"
+      accept="image/*"
+      className="w-full text-sm"
+      onChange={e => handleMainImageChange(e.target.files?.[0] || null)}
+    />
+
+    <div className="mt-4">
+      <p className="text-[10px] font-bold text-stone-500 uppercase mb-2">Main Image</p>
+      <img
+        src={mainImagePreview || editingProduct.image}
+        alt="Current main product"
+        className="w-full h-48 object-cover rounded-xl border border-amber-100 shadow-sm"
+      />
+    </div>
+  </div>
+
+  <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
+    <label className="text-xs font-bold text-amber-800 uppercase block mb-2">
+      Add New Gallery Images
+    </label>
+    <input
+      type="file"
+      accept="image/*"
+      multiple
+      className="w-full text-sm"
+      onChange={e => handleAdditionalImagesChange(Array.from(e.target.files || []))}
+    />
+
+    {editingProduct.additional_images?.length > 0 && (
+      <p className="text-[10px] text-gray-500 mt-2 italic font-semibold uppercase">
+        Current Gallery: {editingProduct.additional_images.length} images
+      </p>
+    )}
+
+    {additionalImagePreviews.length > 0 && (
+      <div className="mt-4">
+        <p className="text-[10px] font-bold text-stone-500 uppercase mb-2">
+          New Gallery Preview ({additionalImagePreviews.length})
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          {additionalImagePreviews.map((preview, index) => (
+            <img
+              key={index}
+              src={preview}
+              alt={`New gallery preview ${index + 1}`}
+              className="w-full h-24 object-cover rounded-xl border border-amber-100"
+            />
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</div>
               </div>
 
               <div className="mt-8 pt-6 border-t flex justify-between items-center">
@@ -352,12 +424,51 @@ export default function AdminProductsPage() {
                <div className="space-y-6">
                  <div className={`p-4 rounded-xl border-2 border-dashed transition-colors ${errors.includes('mainImage') ? 'border-red-500 bg-red-50' : 'bg-gray-50 border-gray-300'}`}>
                    <label className="text-xs font-bold text-amber-800 uppercase block mb-2">Main Product Image</label>
-                   <input type="file" className="w-full text-sm" onChange={e => {setMainImage(e.target.files?.[0] || null); setErrors(errors.filter(err => err !== 'mainImage'))}} />
+                   <input
+                      type="file"
+                      accept="image/*"
+                      className="w-full text-sm"
+                      onChange={e => handleMainImageChange(e.target.files?.[0] || null)}
+                    />
                  </div>
+
+                {mainImagePreview && (
+                  <div className="mt-4">
+                    <p className="text-[10px] font-bold text-stone-500 uppercase mb-2">Main Image Preview</p>
+                    <img
+                      src={mainImagePreview}
+                      alt="Main preview"
+                      className="w-full h-56 object-cover rounded-xl border border-amber-100 shadow-sm"
+                    />
+                  </div>
+                )}
                  <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
                    <label className="text-xs font-bold text-amber-800 uppercase block mb-2">Additional Gallery Images</label>
-                   <input type="file" multiple className="w-full text-sm" onChange={e => setAdditionalImages(Array.from(e.target.files || []))} />
+                  <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="w-full text-sm"
+                      onChange={e => handleAdditionalImagesChange(Array.from(e.target.files || []))}
+                    />
                  </div>
+                 {additionalImagePreviews.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-[10px] font-bold text-stone-500 uppercase mb-2">
+                      Gallery Preview ({additionalImagePreviews.length})
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {additionalImagePreviews.map((preview, index) => (
+                        <img
+                          key={index}
+                          src={preview}
+                          alt={`Gallery preview ${index + 1}`}
+                          className="w-full h-28 object-cover rounded-xl border border-amber-100 shadow-sm"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                </div>
                <div className={`md:col-span-2 p-6 rounded-2xl border transition-colors ${errors.includes('sub_category') ? 'border-red-500 bg-red-50' : 'bg-amber-50/50 border-amber-100'}`}>
                  <label className="text-sm font-bold text-amber-900 block mb-2 tracking-wide">Select Sub-Category</label>
