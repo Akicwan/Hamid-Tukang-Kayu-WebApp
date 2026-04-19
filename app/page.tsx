@@ -22,6 +22,7 @@ interface NewsEvent {
   title: string;
   content: string;
   date: string;
+  fb_link?: string;
 }
 
 const categories = ['Dining Room', 'Living Room', 'Bedroom', 'Cabinet']
@@ -41,7 +42,7 @@ export default function Home() {
 
       const { data: newsData } = await supabase
         .from('NewsEvent')
-        .select('postID, title, content, date')
+        .select('postID, title, content, date, fb_link')
         .order('date', { ascending: false })
         .limit(3)
 
@@ -134,9 +135,25 @@ export default function Home() {
                    </p>
                    <h3 className="text-xl font-serif font-bold text-[#3d2b1f] mb-3 line-clamp-2 leading-snug">{news.title}</h3>
                    <p className="text-stone-500 text-sm leading-relaxed line-clamp-4 mb-5 font-medium">{news.content}</p>
-                   <Link href="/news-events" className="text-[10px] font-black text-[#3d2b1f] uppercase tracking-tighter hover:text-amber-700 transition-colors">
-                     Read Details
-                   </Link>
+                   <div className="flex flex-wrap gap-3 pt-1">
+                    <Link
+                      href="/news-events"
+                      className="text-[10px] font-black text-[#3d2b1f] uppercase tracking-tighter hover:text-amber-700 transition-colors"
+                    >
+                      Read Details
+                    </Link>
+
+                    {news.fb_link && (
+                      <a
+                        href={news.fb_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-black text-blue-600 uppercase tracking-tighter hover:underline"
+                      >
+                        View on Facebook
+                      </a>
+                    )}
+                  </div>
                 </div>
               ))
             ) : (

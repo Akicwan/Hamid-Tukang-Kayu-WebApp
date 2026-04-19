@@ -1,179 +1,202 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
-import AdminSidebar from '@/components/AdminSidebar'
-import { FiPlus, FiSearch, FiEdit3, FiTrash2, FiCalendar } from 'react-icons/fi'
+import Navbar from '../../components/Navbar'
+import { FiSearch, FiFileText } from 'react-icons/fi'
 
 interface NewsEvent {
-  postID: string;
-  title: string;
-  content: string;
-  date: string;
-  created_at?: string;
+  postID: string
+  title: string
+  content: string
+  date: string
+  fb_link?: string
+  image_urls?: string[]
+  created_at?: string
 }
 
-export default function NewsEventsPage() {
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'view' | 'add'>('view')
-  const [loading, setLoading] = useState(true)
+export default function NewsPage() {
   const [posts, setPosts] = useState<NewsEvent[]>([])
-  
-  // Modals & Form State
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [editingPost, setEditingPost] = useState<NewsEvent | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [errors, setErrors] = useState<string[]>([])
+  const [filteredPosts, setFilteredPosts] = useState<NewsEvent[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [form, setForm] = useState({ title: '', content: '', date: new Date().toISOString().split('T')[0] })
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) router.replace('/admin/login')
-      else {
-        fetchPosts()
-        setLoading(false)
+    async function fetchPosts() {
+      setLoading(true)
+
+      const { data, error } = await supabase
+        .from('NewsEvent')
+        .select('*')
+        .order('date', { ascending: false })
+
+      if (data) {
+        setPosts(data)
+        setFilteredPosts(data)
       }
-    })
-  }, [router])
 
-  const fetchPosts = async () => {
-    const { data, error } = await supabase.from('NewsEvent').select('*').order('date', { ascending: false })
-    if (data) setPosts(data)
-  }
-
-  const resetForm = () => {
-    setForm({ title: '', content: '', date: new Date().toISOString().split('T')[0] })
-    setErrors([])
-  }
-
-  const handleSavePost = async () => {
-    const newErrors: string[] = []
-    if (!form.title.trim()) newErrors.push('title')
-    if (!form.content.trim()) newErrors.push('content')
-
-    if (newErrors.length > 0) { setErrors(newErrors); return; }
-
-    setIsProcessing(true)
-    try {
-      if (editingPost) {
-        const { error } = await supabase.from('NewsEvent').update(form).eq('postID', editingPost.postID)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('NewsEvent').insert([form])
-        if (error) throw error
+      if (error) {
+        console.error(error.message)
       }
-      
-      fetchPosts()
-      setEditingPost(null)
-      resetForm()
-      setShowSuccessModal(true)
-    } catch (err: any) { alert(err.message) } finally { setIsProcessing(false) }
-  }
 
-  if (loading) return <div className="p-10 text-center font-bold">Loading Press Room...</div>
+      setLoading(false)
+    }
+
+    fetchPosts()
+  }, [])
+
+  useEffect(() => {
+    let result = posts
+
+    if (searchQuery) {
+      result = result.filter(
+        (post) =>
+          post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          post.content.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    setFilteredPosts(result)
+  }, [searchQuery, posts])
+
+  const recentPosts = posts.slice(0, 5)
 
   return (
-    <div className="flex min-h-screen bg-[#f5efe6]">
-      <AdminSidebar />
-      <main className="flex-1 p-8">
-        
-        {/* SUCCESS MODAL */}
-        {showSuccessModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl border border-amber-100">
-              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-2xl">✓</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Post Published</h3>
-              <div className="flex flex-col gap-3">
-                <button onClick={() => { setShowSuccessModal(false); setActiveTab('view'); }} className="bg-amber-700 text-white font-bold py-3 rounded-xl hover:bg-amber-800 transition-all">View All Posts</button>
-                <button onClick={() => setShowSuccessModal(false)} className="text-gray-500 font-semibold py-2">Create Another</button>
+    <div className="bg-[#fcfaf8] min-h-screen font-sans">
+      <Navbar />
+
+      {/* Header Banner */}
+      <div className="bg-[#3d2b1f] py-16 text-center text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]"></div>
+        <div className="relative z-10">
+          <h1 className="text-4xl font-serif font-bold tracking-tight mb-2">News & Events</h1>
+          <p className="text-amber-200/80 italic font-light tracking-widest uppercase text-xs">
+            Stories, Updates & Highlights from Hamid Tukang Kayu
+          </p>
+        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        <div className="flex flex-col md:flex-row gap-12">
+          
+          {/* Sidebar */}
+          <aside className="w-full md:w-64 space-y-8">
+            <div>
+              <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest mb-4">
+                Search
+              </h3>
+              <div className="relative">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="text"
+                  placeholder="Find a post..."
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-stone-200 rounded-xl focus:border-amber-700 outline-none transition-all text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Tab Controls */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-amber-900 tracking-tight uppercase font-serif">News & Events</h1>
-          <div className="flex bg-white p-1 rounded-xl shadow-sm border border-amber-100">
-            <button onClick={() => setActiveTab('view')} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'view' ? 'bg-amber-700 text-white shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}>View Posts</button>
-            <button onClick={() => { setActiveTab('add'); setEditingPost(null); resetForm(); }} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'add' ? 'bg-amber-700 text-white shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}>New Article</button>
-          </div>
-        </div>
+            <div>
+              <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest mb-4">
+                Recent Posts
+              </h3>
+              <ul className="space-y-2">
+                {recentPosts.map((post) => (
+                  <li key={post.postID}>
+                    <Link
+                      href={`/news/${post.postID}`}
+                      className="block px-4 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-all"
+                    >
+                      {post.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
 
-        {/* VIEW ALL TAB */}
-        {activeTab === 'view' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {posts.map(post => (
-              <div key={post.postID} className="bg-white p-6 rounded-2xl shadow-sm border border-amber-100 hover:border-amber-500 transition-all group">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-2 text-stone-400 text-[10px] font-bold uppercase tracking-widest">
-                    <FiCalendar /> {new Date(post.date).toLocaleDateString()}
-                  </div>
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => { setEditingPost(post); setForm(post); setActiveTab('add'); }} className="text-amber-600 hover:text-amber-800"><FiEdit3 size={18}/></button>
-                  </div>
-                </div>
-                <h3 className="text-lg font-serif font-bold text-[#3d2b1f] mb-3">{post.title}</h3>
-                <p className="text-stone-500 text-sm line-clamp-3 leading-relaxed mb-4">{post.content}</p>
-                <div className="pt-4 border-t border-stone-50 text-[10px] font-black text-amber-700 uppercase tracking-tighter cursor-pointer">Read Full Article &rarr;</div>
+          {/* News List */}
+          <section className="flex-1">
+            <div className="flex justify-between items-center mb-8">
+              <p className="text-stone-400 text-sm font-medium">
+                Showing <span className="text-[#3d2b1f] font-bold">{filteredPosts.length}</span> results
+              </p>
+              <div className="flex items-center gap-2 text-stone-500">
+                <FiFileText size={14} />
+                <span className="text-xs font-bold uppercase tracking-tighter">Latest Articles</span>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
 
-        {/* ADD / EDIT ARTICLE TAB */}
-        {activeTab === 'add' && (
-          <div className="bg-white p-8 rounded-2xl shadow-md border border-amber-100 max-w-4xl mx-auto">
-             <h2 className="text-2xl font-serif font-bold mb-8 text-amber-900 italic underline underline-offset-8 decoration-amber-100 uppercase">
-               {editingPost ? 'Edit Article' : 'Draft New Article'}
-             </h2>
-             
-             <div className="space-y-6">
-                <div>
-                  <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Headline Title</label>
-                  <input 
-                    className={`w-full border p-4 rounded-xl mt-2 outline-none border-stone-200 focus:border-amber-700 transition-colors ${errors.includes('title') ? 'border-red-500 bg-red-50' : ''}`}
-                    value={form.title} 
-                    onChange={e => setForm({...form, title: e.target.value})}
-                    placeholder="e.g., Completion of Custom Wardrobe Project in Batu Pahat"
-                  />
-                </div>
+            {loading ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-96 bg-stone-100 rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : filteredPosts.length === 0 ? (
+              <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-stone-100">
+                <p className="text-stone-400 font-serif italic">No news found.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in duration-500">
+                {filteredPosts.map((post) => (
+                  <article
+                    key={post.postID}
+                    className="bg-white rounded-2xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-md transition-all"
+                  >
+                    <Link href={`/news/${post.postID}`}>
+                      <div className="overflow-hidden">
+                        {post.image_urls && post.image_urls.length > 0 ? (
+                          <img
+                            src={post.image_urls[0]}
+                            alt={post.title}
+                            className="w-full h-64 object-cover hover:scale-[1.03] transition duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-64 bg-stone-100 flex items-center justify-center text-stone-400 text-sm">
+                            No image available
+                          </div>
+                        )}
+                      </div>
+                    </Link>
 
-                <div>
-                  <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Event Date</label>
-                  <input 
-                    type="date"
-                    className="w-full border p-4 rounded-xl mt-2 outline-none border-stone-200 focus:border-amber-700 transition-colors"
-                    value={form.date} 
-                    onChange={e => setForm({...form, date: e.target.value})}
-                  />
-                </div>
+                    <div className="p-6">
+                      <p className="text-[11px] uppercase tracking-widest text-stone-400 mb-3 font-bold">
+                        {new Date(post.date).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </p>
 
-                <div>
-                  <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Main Content</label>
-                  <textarea 
-                    className={`w-full border p-4 rounded-xl h-64 mt-2 outline-none border-stone-200 focus:border-amber-700 transition-colors resize-none ${errors.includes('content') ? 'border-red-500 bg-red-50' : ''}`}
-                    value={form.content} 
-                    onChange={e => setForm({...form, content: e.target.value})}
-                    placeholder="Describe the event, project details, or company news..."
-                  />
-                </div>
-             </div>
+                      <Link href={`/news/${post.postID}`}>
+                        <h2 className="text-2xl font-serif font-bold text-[#3d2b1f] mb-3 hover:text-amber-700 transition">
+                          {post.title}
+                        </h2>
+                      </Link>
 
-             <div className="mt-10 pt-6 border-t flex justify-end gap-4">
-                <button onClick={() => { setActiveTab('view'); resetForm(); }} className="px-8 py-4 rounded-xl font-bold text-stone-400 hover:bg-stone-50 transition">Discard</button>
-                <button 
-                  onClick={handleSavePost} 
-                  disabled={isProcessing}
-                  className={`px-12 py-4 rounded-xl font-bold text-white shadow-xl ${isProcessing ? 'bg-gray-300' : 'bg-[#3d2b1f] hover:bg-stone-800 transition-all'}`}
-                >
-                  {isProcessing ? 'Publishing...' : (editingPost ? 'Update Article' : 'Publish News')}
-                </button>
-             </div>
-          </div>
-        )}
+                      <p className="text-stone-600 text-sm leading-7 mb-6">
+                        {post.content.length > 180
+                          ? `${post.content.slice(0, 180)}...`
+                          : post.content}
+                      </p>
+
+                      <Link
+                        href={`/news/${post.postID}`}
+                        className="inline-block border border-stone-700 px-5 py-2 text-xs uppercase tracking-widest hover:bg-stone-800 hover:text-white transition"
+                      >
+                        Read More
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       </main>
     </div>
   )

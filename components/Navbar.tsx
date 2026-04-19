@@ -40,7 +40,7 @@ export default function Navbar() {
               Our Heritage
             </Link>
             <Link 
-              href="/events" 
+              href="/news" 
               className={`transition-colors duration-300 ${isActive('/events') ? 'text-amber-700' : 'text-stone-500 hover:text-amber-700'}`}
             >
               News & Events
