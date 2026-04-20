@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient'
 import Navbar from '../../components/Navbar'
 import ProductCard from '../../components/ProductCard'
 import { FiSearch, FiFilter } from 'react-icons/fi'
+import Footer from '../../components/Footer'
 
 // Define Product structure
 interface Product {
@@ -152,6 +153,7 @@ export default function ProductCataloguePage() {
           </section>
         </div>
       </main>
+      <Footer />
     </div>
   )
 }

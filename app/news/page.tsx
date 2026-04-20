@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import Navbar from '../../components/Navbar'
 import { FiSearch, FiFileText } from 'react-icons/fi'
+import Footer from '../../components/Footer'
 
 interface NewsEvent {
   postID: string
@@ -198,6 +199,7 @@ export default function NewsPage() {
           </section>
         </div>
       </main>
+      <Footer />
     </div>
   )
 }
