@@ -1,47 +1,74 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-const images = [
-  'https://images.unsplash.com/photo-1505691938895-1758d7feb511',
-  'https://images.unsplash.com/photo-1549187774-b4e9b0445b41',
-  'https://images.unsplash.com/photo-1567016432779-094069958ea5'
-]
+interface SlideshowProps {
+  images?: string[]
+  showArrows?: boolean
+  autoPlay?: boolean
+  interval?: number
+}
 
-export default function Slideshow() {
+export default function Slideshow({
+  images = [],
+  showArrows = false,
+  autoPlay = true,
+  interval = 4000,
+}: SlideshowProps) {
   const [index, setIndex] = useState(0)
 
+  useEffect(() => {
+    if (!autoPlay || images.length <= 1) return
+
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % images.length)
+    }, interval)
+
+    return () => clearInterval(timer)
+  }, [autoPlay, images, interval])
+
   const prev = () => {
-    setIndex((index - 1 + images.length) % images.length)
+    setIndex((prev) => (prev - 1 + images.length) % images.length)
   }
 
   const next = () => {
-    setIndex((index + 1) % images.length)
+    setIndex((prev) => (prev + 1) % images.length)
+  }
+
+  if (!images.length) {
+    return <div className="w-full h-full bg-stone-200" />
   }
 
   return (
-    <div className="relative w-full h-64 md:h-80 rounded-xl overflow-hidden">
-      <img
-        src={images[index]}
-        alt="Furniture"
-        className="w-full h-full object-cover"
-      />
+    <div className="relative w-full h-full overflow-hidden">
+      {images.map((image, i) => (
+        <img
+          key={i}
+          src={image}
+          alt={`Slide ${i + 1}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+            i === index ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      ))}
 
-      {/* Left arrow */}
-      <button
-        onClick={prev}
-        className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full"
-      >
-        ◀
-      </button>
+      {showArrows && images.length > 1 && (
+        <>
+          <button
+            onClick={prev}
+            className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full z-10"
+          >
+            ◀
+          </button>
 
-      {/* Right arrow */}
-      <button
-        onClick={next}
-        className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full"
-      >
-        ▶
-      </button>
+          <button
+            onClick={next}
+            className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full z-10"
+          >
+            ▶
+          </button>
+        </>
+      )}
     </div>
   )
 }
