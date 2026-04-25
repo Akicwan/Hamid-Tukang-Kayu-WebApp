@@ -85,7 +85,10 @@ export default function AdminCustomersPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table') // Default to table for CRM
   const [loading, setLoading] = useState(true)
   const [customers, setCustomers] = useState<Customer[]>([])
-
+const [nextCpoNo, setNextCpoNo] = useState('')
+const [nextInvoiceNo, setNextInvoiceNo] = useState('')
+const [nextReceiptNo, setNextReceiptNo] = useState('')
+const [nextPaymentReceiptNo, setNextPaymentReceiptNo] = useState('')
 const [showCreateOrderModal, setShowCreateOrderModal] = useState(false)
   const [orders, setOrders] = useState<CustomerOrder[]>([])
   const [selectedCustomerOrders, setSelectedCustomerOrders] = useState<CustomerOrder[]>([])
@@ -118,7 +121,7 @@ const [paymentForm, setPaymentForm] = useState({
   reference_no: '',
   notes: '',
   receipt_no: '',
-  invoice_no: '',
+  
 })
 
 const [orderItems, setOrderItems] = useState<OrderItemForm[]>([
@@ -158,10 +161,30 @@ const [orderItems, setOrderItems] = useState<OrderItemForm[]>([
     })
   }, [router])
 
-  const fetchCustomers = async () => {
-    const { data, error } = await supabase.from('customerRecord').select('*').order('name', { ascending: true })
-    if (data) setCustomers(data)
+const fetchCustomers = async () => {
+  const { data, error } = await supabase
+    .from('customerRecord')
+    .select('*')
+    .order('name', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching customers:', error.message)
+    return
   }
+
+  if (data) setCustomers(data)
+
+  const { data: ordersData, error: ordersError } = await supabase
+    .from('customer_orders')
+    .select('*')
+
+  if (ordersError) {
+    console.error('Error fetching all orders:', ordersError.message)
+    return
+  }
+
+  if (ordersData) setOrders(ordersData)
+}
 
 const fetchOrdersByCustomer = async (customerId: string) => {
   const { data, error } = await supabase
@@ -193,6 +216,28 @@ const fetchOrderItemsByOrder = async (orderId: string) => {
   }
 
   return data || []
+}
+
+const fetchNextOrderNumbers = async () => {
+  const { data: cpoNumber } = await supabase.rpc('preview_next_doc_number', {
+    doc_type: 'cpo',
+  })
+
+  const { data: invoiceNumber } = await supabase.rpc('preview_next_doc_number', {
+    doc_type: 'invoice',
+  })
+
+  setNextCpoNo(String(cpoNumber))
+  setNextInvoiceNo(String(invoiceNumber).padStart(4, '0'))
+  setNextReceiptNo('')
+}
+
+const fetchNextPaymentReceiptNumber = async () => {
+  const { data: receiptNumber } = await supabase.rpc('preview_next_doc_number', {
+    doc_type: 'receipt',
+  })
+
+  setNextPaymentReceiptNo(String(receiptNumber))
 }
 
 const handleEditOrder = async (order: CustomerOrder) => {
@@ -298,6 +343,7 @@ const handleOpenCustomerDetails = async (customer: Customer) => {
 const handleOpenPayments = async (order: CustomerOrder) => {
   setSelectedOrder(order)
   await fetchPaymentsByOrder(order.id)
+  await fetchNextPaymentReceiptNumber()
   setShowPaymentModal(true)
 }
 
@@ -902,69 +948,86 @@ const buildPaymentInvoiceHtml = (
   </div>
 `
 
-const buildPaymentReceiptHtml = (
+const buildPaymentReceiptHtml = async (
   customer: Customer,
   order: CustomerOrder,
   payment: CustomerPayment
-) => `
-  <div class="doc-title">RECEIPT</div>
-  ${getCompanyHeaderHtml()}
+) => {
+  const items = await fetchOrderItemsByOrder(order.id)
 
-  <div class="row-flex">
-    <div class="col">
-      <div><strong>${customer.name || '-'}</strong></div>
-      <div>${(customer.address || '-').replace(/\n/g, '<br/>')}</div>
-      <div>Attn : ${customer.attention_person || '-'}</div>
-      <div>Hp : ${customer.phone || '-'}</div>
-    </div>
-    <div class="col" style="max-width: 260px;">
-      <div><span class="label">RECEIPT NO :</span> ${payment.receipt_no || '-'}</div>
-      <div><span class="label">Date :</span> ${formatDisplayDate(payment.payment_date)}</div>
-    </div>
-  </div>
+  const itemText = items
+    .map(item => `${item.qty} unit ${item.description}`)
+    .join(' + ')
 
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 50px;">No</th>
-        <th>Description</th>
-        <th style="width: 140px;">Total (RM)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>1.</td>
-        <td>
-          <div><strong>Payment received for order ${order.order_title || order.cpo_no || order.id}</strong></div>
-          <div style="margin-top:8px;"><strong>Method:</strong> ${payment.payment_method || '-'}</div>
-          <div><strong>Reference:</strong> ${payment.reference_no || '-'}</div>
-          <div class="small" style="margin-top:8px;">${payment.notes || '-'}</div>
-        </td>
-        <td>${formatMoney(payment.amount)}</td>
-      </tr>
-    </tbody>
-  </table>
+  const detailsText = items
+    .map(item => item.details || '')
+    .filter(Boolean)
+    .join('<br/>')
 
-  <div style="margin-top: 24px;">Thank you,</div>
+  return `
+    <div class="doc-title">RECEIPT</div>
+    ${getCompanyHeaderHtml()}
 
-  <div class="signature-row" style="margin-top: 40px;">
-    <div style="text-align: left; width: 250px;">
-      <div style="height: 60px; display: flex; align-items: flex-end;">
-        <img
-          src="http://localhost:3000/stamp-signature-hts.png"
-          style="width: 90px; opacity: 0.8; transform: rotate(-8deg);"
-        />
+    <div class="row-flex">
+      <div class="col">
+        <div><strong>${customer.name || '-'}</strong></div>
+        <div>${(customer.address || '-').replace(/\n/g, '<br/>')}</div>
+        <div>Attn : ${customer.attention_person || '-'}</div>
+        <div>Hp : ${customer.phone || '-'}</div>
       </div>
-      <div style="border-top: 1px solid #222; width: 180px; margin-bottom: 6px;"></div>
-      <div style="font-size: 12px;">
-        <div>A Rashid Abdul Hamid</div>
-        <div>Siti Aidah Abdullah</div>
-        <div>Hamid Technology Solution</div>
-        <div>019-3890090 / 016-2819826</div>
+
+      <div class="col" style="max-width: 260px;">
+        <div><span class="label">RECEIPT NO :</span> ${payment.receipt_no || '-'}</div>
+        <div><span class="label">Date :</span> ${formatDisplayDate(payment.payment_date)}</div>
       </div>
     </div>
-  </div>
-`
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 50px;">No</th>
+          <th>Description</th>
+          <th style="width: 140px;">Total (RM)</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr>
+          <td>1.</td>
+          <td>
+            <div><strong>Total Payment dated ${formatDisplayDate(payment.payment_date)} -</strong></div>
+            <div style="margin-top:8px;"><strong>For</strong></div>
+            <div>${itemText || '-'}</div>
+            <div class="small" style="margin-top:8px;">${detailsText || ''}</div>
+          </td>
+          <td>${formatMoney(payment.amount)}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 24px;">Thank you,</div>
+
+    <div class="signature-row" style="margin-top: 40px;">
+      <div style="text-align: left; width: 250px;">
+        <div style="height: 60px; display: flex; align-items: flex-end;">
+          <img
+            src="http://localhost:3000/stamp-signature-hts.png"
+            style="width: 90px; opacity: 0.8; transform: rotate(-8deg);"
+          />
+        </div>
+
+        <div style="border-top: 1px solid #222; width: 180px; margin-bottom: 6px;"></div>
+
+        <div style="font-size: 12px;">
+          <div>A Rashid Abdul Hamid</div>
+          <div>Siti Aidah Abdullah</div>
+          <div>Hamid Technology Solution</div>
+          <div>019-3890090 / 016-2819826</div>
+        </div>
+      </div>
+    </div>
+  `
+}
 
 const handleGeneratePaymentInvoice = async (payment: CustomerPayment) => {
   if (!selectedCustomer || !selectedOrder) return
@@ -974,8 +1037,8 @@ const handleGeneratePaymentInvoice = async (payment: CustomerPayment) => {
 
 const handleGeneratePaymentReceipt = async (payment: CustomerPayment) => {
   if (!selectedCustomer || !selectedOrder) return
-  const html = buildPaymentReceiptHtml(selectedCustomer, selectedOrder, payment)
-  openPrintWindow(`Receipt-${payment.receipt_no || payment.id}`, html)
+ const html = await buildPaymentReceiptHtml(selectedCustomer, selectedOrder, payment)
+  openPrintWindow(`Receipt-${payment.receipt_no || payment.id}`, await html)
 }
   
   const resetForm = () => {
@@ -1081,6 +1144,22 @@ const handleCreateOrder = async () => {
   setIsProcessing(true)
 
   try {
+    // 1. Get running numbers FIRST
+    const { data: cpoNumber, error: cpoError } = await supabase.rpc(
+      'get_next_doc_number',
+      { doc_type: 'cpo' }
+    )
+    if (cpoError) throw cpoError
+
+    const { data: invoiceNumber, error: invoiceError } = await supabase.rpc(
+      'get_next_doc_number',
+      { doc_type: 'invoice' }
+    )
+    if (invoiceError) throw invoiceError
+
+   
+
+    // 2. Then create the order using those numbers
     const { data: orderData, error: orderError } = await supabase
       .from('customer_orders')
       .insert([
@@ -1088,9 +1167,10 @@ const handleCreateOrder = async () => {
           customer_id: selectedCustomer.recordID,
           order_title: orderForm.order_title,
           document_date: orderForm.document_date,
-          cpo_no: orderForm.cpo_no || null,
-          invoice_no: orderForm.invoice_no || null,
-          receipt_no: orderForm.receipt_no || null,
+
+          cpo_no: String(cpoNumber),
+          invoice_no: String(invoiceNumber).padStart(4, '0'),
+          receipt_no: null,
           amount_paid: amountPaidNumber,
           payment_date: orderForm.payment_date || null,
           total_amount: totalAmount,
@@ -1275,7 +1355,7 @@ const resetPaymentForm = () => {
     reference_no: '',
     notes: '',
     receipt_no: '',
-    invoice_no: '',
+    
   })
 }
 
@@ -1297,9 +1377,18 @@ const handleCreatePayment = async () => {
   setIsProcessing(true)
 
   try {
-    const { error } = await supabase
-      .from('customer_payments')
-      .insert([
+  const { data: receiptNumber, error: receiptError } = await supabase.rpc(
+    'get_next_doc_number',
+    { doc_type: 'receipt' }
+  )
+
+  if (receiptError) throw receiptError
+
+  const newReceiptNo = String(receiptNumber)
+
+  const { error } = await supabase
+    .from('customer_payments')
+    .insert([
         {
           order_id: selectedOrder.id,
           payment_date: paymentForm.payment_date,
@@ -1307,8 +1396,7 @@ const handleCreatePayment = async () => {
           payment_method: paymentForm.payment_method || null,
           reference_no: paymentForm.reference_no || null,
           notes: paymentForm.notes || null,
-          receipt_no: paymentForm.receipt_no || null,
-          invoice_no: paymentForm.invoice_no || null,
+          receipt_no: newReceiptNo,
         },
       ])
 
@@ -1316,6 +1404,7 @@ const handleCreatePayment = async () => {
 
     await recalculateOrderPaymentSummary(selectedOrder.id)
     await fetchPaymentsByOrder(selectedOrder.id)
+    await fetchNextPaymentReceiptNumber()
 
     if (selectedCustomer) {
       await fetchOrdersByCustomer(selectedCustomer.recordID)
@@ -1332,6 +1421,7 @@ const handleCreatePayment = async () => {
 
 const handleEditPayment = (payment: CustomerPayment) => {
   setEditingPayment(payment)
+
   setPaymentForm({
     payment_date: payment.payment_date || '',
     amount: String(payment.amount ?? ''),
@@ -1339,7 +1429,6 @@ const handleEditPayment = (payment: CustomerPayment) => {
     reference_no: payment.reference_no || '',
     notes: payment.notes || '',
     receipt_no: payment.receipt_no || '',
-    invoice_no: payment.invoice_no || '',
   })
 }
 
@@ -1364,14 +1453,13 @@ const handleUpdatePayment = async () => {
     const { error } = await supabase
       .from('customer_payments')
       .update({
-        payment_date: paymentForm.payment_date,
-        amount,
-        payment_method: paymentForm.payment_method || null,
-        reference_no: paymentForm.reference_no || null,
-        notes: paymentForm.notes || null,
-        receipt_no: paymentForm.receipt_no || null,
-        invoice_no: paymentForm.invoice_no || null,
-      })
+          payment_date: paymentForm.payment_date,
+          amount,
+          payment_method: paymentForm.payment_method || null,
+          reference_no: paymentForm.reference_no || null,
+          notes: paymentForm.notes || null,
+          receipt_no: paymentForm.receipt_no || null,
+        })
       .eq('id', editingPayment.id)
 
     if (error) throw error
@@ -1390,6 +1478,47 @@ const handleUpdatePayment = async () => {
   } finally {
     setIsProcessing(false)
   }
+}
+
+const handleDeletePayment = async () => {
+  if (!selectedOrder || !editingPayment) return
+
+  const confirmed = window.confirm(
+    `Delete this payment record?\n\nAmount: RM ${Number(editingPayment.amount || 0).toFixed(2)}`
+  )
+
+  if (!confirmed) return
+
+  setIsProcessing(true)
+
+  try {
+    const { error } = await supabase
+      .from('customer_payments')
+      .delete()
+      .eq('id', editingPayment.id)
+
+    if (error) throw error
+
+    await recalculateOrderPaymentSummary(selectedOrder.id)
+    await fetchPaymentsByOrder(selectedOrder.id)
+
+    if (selectedCustomer) {
+      await fetchOrdersByCustomer(selectedCustomer.recordID)
+    }
+
+    resetPaymentForm()
+    alert('Payment deleted successfully!')
+  } catch (err: any) {
+    alert(err.message)
+  } finally {
+    setIsProcessing(false)
+  }
+}
+
+const getCustomerTotalBalance = (customerId: string) => {
+  return orders
+    .filter(order => order.customer_id === customerId)
+    .reduce((sum, order) => sum + Number(order.balance || 0), 0)
 }
 
   const filteredCustomers = customers.filter(c => {
@@ -1519,7 +1648,9 @@ const balanceAmount = totalAmount - amountPaidNumber
                     <tr>
                       <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Customer Name</th>
                       <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Phone</th>
-                      <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Primary Service</th>
+                      <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">
+                        Total Balance
+                      </th>
                       <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest text-center">Action</th>
                     </tr>
                   </thead>
@@ -1528,7 +1659,9 @@ const balanceAmount = totalAmount - amountPaidNumber
                       <tr key={c.recordID} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                         <td className="p-4 font-bold text-sm text-[#3d2b1f]">{c.name}</td>
                         <td className="p-4 text-sm text-gray-600 font-medium">{c.phone}</td>
-                        <td className="p-4 font-bold text-amber-700 text-sm">{c.serviceType}</td>
+                       <td className="p-4 font-bold text-red-600 text-sm">
+                          RM {getCustomerTotalBalance(c.recordID).toFixed(2)}
+                        </td>
                         <td className="p-4 text-center">
                         <div className="flex items-center justify-center gap-3">
                           <button
@@ -1581,7 +1714,10 @@ const balanceAmount = totalAmount - amountPaidNumber
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-amber-800">Order History</h3>
         <button
-          onClick={() => setShowCreateOrderModal(true)}
+          onClick={async () => {
+              await fetchNextOrderNumbers()
+              setShowCreateOrderModal(true)
+            }}
           className="px-5 py-2 bg-amber-700 text-white rounded-xl font-bold hover:bg-amber-800 transition"
         >
           + Create New Order
@@ -1596,10 +1732,10 @@ const balanceAmount = totalAmount - amountPaidNumber
             <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Date</th>
             <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">CPO No</th>
             <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Invoice No</th>
-            <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Receipt No</th>
+           
             <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Total</th>
             <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Balance</th>
-            <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest text-center">Documents</th>
+            <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest text-center">Actions</th>
           </tr>
             
           </thead>
@@ -1610,53 +1746,46 @@ const balanceAmount = totalAmount - amountPaidNumber
                   <td className="p-4 text-sm text-gray-700">{order.document_date || '-'}</td>
                   <td className="p-4 text-sm text-gray-700">{order.cpo_no || '-'}</td>
                   <td className="p-4 text-sm text-gray-700">{order.invoice_no || '-'}</td>
-                  <td className="p-4 text-sm text-gray-700">{order.receipt_no || '-'}</td>
+                 
                   <td className="p-4 text-sm font-semibold text-gray-800">RM {Number(order.total_amount || 0).toFixed(2)}</td>
                   <td className="p-4 text-sm font-semibold text-red-600">RM {Number(order.balance || 0).toFixed(2)}</td>
                   <td className="p-4 text-center">
-  <div className="flex flex-col gap-2">
-    <button
-      onClick={() => handleOpenPayments(order)}
-      className="px-3 py-1 rounded-lg bg-gray-700 text-white text-xs font-bold hover:bg-gray-800"
-    >
-      Payments
-    </button>
+  <div className="flex flex-col gap-2 min-w-[120px]">
+  <button
+    onClick={() => handleOpenPayments(order)}
+    className="px-3 py-1 rounded-lg bg-gray-700 text-white text-xs font-bold hover:bg-gray-800"
+  >
+    Payments
+  </button>
 
-    <button
-      onClick={() => handleEditOrder(order)}
-      className="px-3 py-1 rounded-lg bg-slate-600 text-white text-xs font-bold hover:bg-slate-700"
-    >
-      Edit
-    </button>
+  <button
+    onClick={() => handleEditOrder(order)}
+    className="px-3 py-1 rounded-lg bg-slate-600 text-white text-xs font-bold hover:bg-slate-700"
+  >
+    Edit Order
+  </button>
 
-    <button
-      onClick={() => handleDeleteOrder(order)}
-      className="px-3 py-1 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700"
-    >
-      Delete
-    </button>
+  <button
+    onClick={() => handleGenerateCpo(order)}
+    className="px-3 py-1 rounded-lg bg-amber-700 text-white text-xs font-bold hover:bg-amber-800"
+  >
+    CPO
+  </button>
 
-    <button
-      onClick={() => handleGenerateCpo(order)}
-      className="px-3 py-1 rounded-lg bg-amber-700 text-white text-xs font-bold hover:bg-amber-800"
-    >
-      CPO
-    </button>
+  <button
+    onClick={() => handleGenerateInvoice(order)}
+    className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
+  >
+    Invoice
+  </button>
 
-    <button
-      onClick={() => handleGenerateInvoice(order)}
-      className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
-    >
-      Invoice
-    </button>
-
-    <button
-      onClick={() => handleGenerateReceipt(order)}
-      className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700"
-    >
-      Receipt
-    </button>
-  </div>
+  <button
+    onClick={() => handleDeleteOrder(order)}
+    className="mt-2 px-3 py-1 rounded-lg border border-red-200 text-red-600 bg-red-50 text-xs font-bold hover:bg-red-100"
+  >
+    Delete Order
+  </button>
+</div>
 </td>
                 </tr>
               ))
@@ -1730,29 +1859,29 @@ const balanceAmount = totalAmount - amountPaidNumber
         <div>
           <label className="text-xs font-bold text-gray-400 uppercase">CPO No</label>
           <input
-            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
-            value={orderForm.cpo_no}
-            onChange={e => setOrderForm({ ...orderForm, cpo_no: e.target.value })}
+            className="w-full border p-3 border-gray-300 bg-gray-100 rounded-xl mt-1 outline-none text-gray-700"
+            value={editingOrder ? orderForm.cpo_no : nextCpoNo}
+            readOnly
           />
         </div>
 
         <div>
           <label className="text-xs font-bold text-gray-400 uppercase">Invoice No</label>
           <input
-            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
-            value={orderForm.invoice_no}
-            onChange={e => setOrderForm({ ...orderForm, invoice_no: e.target.value })}
+            className="w-full border p-3 border-gray-300 bg-gray-100 rounded-xl mt-1 outline-none text-gray-700"
+            value={editingOrder ? orderForm.invoice_no : nextInvoiceNo}
+            readOnly
           />
         </div>
 
         <div>
-          <label className="text-xs font-bold text-gray-400 uppercase">Receipt No</label>
-          <input
-            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
-            value={orderForm.receipt_no}
-            onChange={e => setOrderForm({ ...orderForm, receipt_no: e.target.value })}
-          />
-        </div>
+        <label className="text-xs font-bold text-gray-400 uppercase">Receipt No</label>
+        <input
+          className="w-full border p-3 border-gray-300 bg-gray-100 rounded-xl mt-1 outline-none text-gray-700"
+          value={editingOrder ? orderForm.receipt_no || 'No payment yet' : 'Generated after payment'}
+          readOnly
+        />
+      </div>
 
         <div>
           <label className="text-xs font-bold text-gray-400 uppercase">Amount Paid</label>
@@ -1982,20 +2111,19 @@ const balanceAmount = totalAmount - amountPaidNumber
         <div>
           <label className="text-xs font-bold text-gray-400 uppercase">Receipt No</label>
           <input
-            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
-            value={paymentForm.receipt_no}
-            onChange={e => setPaymentForm({ ...paymentForm, receipt_no: e.target.value })}
+            className="w-full border p-3 border-gray-300 bg-gray-100 rounded-xl mt-1 outline-none text-gray-700"
+            value={editingPayment ? paymentForm.receipt_no : nextPaymentReceiptNo}
+            readOnly={!editingPayment}
+            onChange={e =>
+              setPaymentForm({
+                ...paymentForm,
+                receipt_no: e.target.value,
+              })
+            }
           />
         </div>
 
-        <div>
-          <label className="text-xs font-bold text-gray-400 uppercase">Invoice No</label>
-          <input
-            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
-            value={paymentForm.invoice_no}
-            onChange={e => setPaymentForm({ ...paymentForm, invoice_no: e.target.value })}
-          />
-        </div>
+        
 
         <div className="md:col-span-3">
           <label className="text-xs font-bold text-gray-400 uppercase">Notes</label>
@@ -2033,7 +2161,7 @@ const balanceAmount = totalAmount - amountPaidNumber
               <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Amount</th>
               <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Method</th>
               <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Receipt No</th>
-              <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Invoice No</th>
+          
               <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest text-center">Actions</th>
             </tr>
           </thead>
@@ -2045,7 +2173,7 @@ const balanceAmount = totalAmount - amountPaidNumber
                   <td className="p-4 text-sm font-semibold text-gray-800">RM {Number(payment.amount || 0).toFixed(2)}</td>
                   <td className="p-4 text-sm text-gray-700">{payment.payment_method || '-'}</td>
                   <td className="p-4 text-sm text-gray-700">{payment.receipt_no || '-'}</td>
-                  <td className="p-4 text-sm text-gray-700">{payment.invoice_no || '-'}</td>
+                 
                   <td className="p-4 text-center">
                     <div className="flex flex-col gap-2">
                       <button
@@ -2054,12 +2182,7 @@ const balanceAmount = totalAmount - amountPaidNumber
                       >
                         Edit
                       </button>
-                      <button
-                        onClick={() => handleGeneratePaymentInvoice(payment)}
-                        className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
-                      >
-                        Invoice
-                      </button>
+                      
                       <button
                         onClick={() => handleGeneratePaymentReceipt(payment)}
                         className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700"
@@ -2079,6 +2202,152 @@ const balanceAmount = totalAmount - amountPaidNumber
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+)}
+
+{editingPayment && (
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+    <div className="bg-white rounded-3xl p-8 max-w-3xl w-full relative border border-amber-100 shadow-2xl">
+      <button
+        onClick={resetPaymentForm}
+        className="absolute top-4 right-6 text-gray-400 hover:text-red-500 text-3xl"
+      >
+        &times;
+      </button>
+
+      <h2 className="text-2xl font-bold text-amber-900 mb-6 border-b pb-4 uppercase tracking-tighter italic">
+        Edit Payment Record
+      </h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label className="text-xs font-bold text-gray-400 uppercase">
+            Payment Date
+          </label>
+          <input
+            type="date"
+            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
+            value={paymentForm.payment_date}
+            onChange={e =>
+              setPaymentForm({
+                ...paymentForm,
+                payment_date: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-gray-400 uppercase">
+            Amount
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
+            value={paymentForm.amount}
+            onChange={e =>
+              setPaymentForm({
+                ...paymentForm,
+                amount: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-gray-400 uppercase">
+            Payment Method
+          </label>
+          <input
+            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
+            value={paymentForm.payment_method}
+            onChange={e =>
+              setPaymentForm({
+                ...paymentForm,
+                payment_method: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-gray-400 uppercase">
+            Reference No
+          </label>
+          <input
+            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
+            value={paymentForm.reference_no}
+            onChange={e =>
+              setPaymentForm({
+                ...paymentForm,
+                reference_no: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-gray-400 uppercase">
+            Receipt No
+          </label>
+          <input
+            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
+            value={paymentForm.receipt_no}
+            onChange={e =>
+              setPaymentForm({
+                ...paymentForm,
+                receipt_no: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="text-xs font-bold text-gray-400 uppercase">
+            Notes
+          </label>
+          <textarea
+            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
+            value={paymentForm.notes}
+            onChange={e =>
+              setPaymentForm({
+                ...paymentForm,
+                notes: e.target.value,
+              })
+            }
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center border-t pt-6">
+        <button
+          onClick={handleDeletePayment}
+          disabled={isProcessing}
+          className="px-6 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300"
+        >
+          Delete Payment
+        </button>
+
+        <div className="flex gap-3">
+          <button
+            onClick={resetPaymentForm}
+            className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={handleUpdatePayment}
+            disabled={isProcessing}
+            className="px-8 py-3 rounded-xl font-bold text-white bg-amber-700 hover:bg-amber-800 disabled:bg-gray-300"
+          >
+            {isProcessing ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
     </div>
   </div>
