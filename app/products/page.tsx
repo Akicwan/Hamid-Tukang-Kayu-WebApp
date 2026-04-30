@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar'
 import ProductCard from '../../components/ProductCard'
 import { FiSearch, FiFilter } from 'react-icons/fi'
 import Footer from '../../components/Footer'
+import Link from 'next/link'
 
 // Define Product structure
 interface Product {
@@ -15,9 +16,21 @@ interface Product {
   category: string;
   sub_category: string;
   image: string;
+  description?: string;
 }
 
 const CATEGORIES = ['All', 'Dining Room', 'Living Room', 'Bedroom', 'Cabinet', 'Masjid', 'Special Projects']
+
+const CATEGORY_MAP: Record<string, string[]> = {
+  "Dining Room": ["Dining Table", "Dining Chairs", "Dining Table Sets"],
+  "Living Room": ["Coffee Table", "Sofa", "Console Table"],
+  "Bedroom": ["Beds", "Dressing Table", "Wardrobe"],
+  "Cabinet": ["Display Cabinet", "Book Cabinet", "Kitchen Cabinet"],
+  "Masjid": [],
+  "Special Projects": ["Mahkamah Shariah", "Kerusi Diraja", "Kerusi Chancellor", "Tapak Cokmar", "Rostrum Diraja"]
+}
+
+
 
 export default function ProductCataloguePage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -27,6 +40,8 @@ export default function ProductCataloguePage() {
   // Filter States
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [selectedSubCategory, setSelectedSubCategory] = useState('All')
+  
 
   useEffect(() => {
     async function fetchProducts() {
@@ -46,21 +61,25 @@ export default function ProductCataloguePage() {
   }, [])
 
   // Handle Filtering Logic
-  useEffect(() => {
-    let result = products
+useEffect(() => {
+  let result = products
 
-    if (selectedCategory !== 'All') {
-      result = result.filter(p => p.category === selectedCategory)
-    }
+  if (selectedCategory !== 'All') {
+    result = result.filter(p => p.category === selectedCategory)
+  }
 
-    if (searchQuery) {
-      result = result.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
+  if (selectedSubCategory !== 'All') {
+    result = result.filter(p => p.sub_category === selectedSubCategory)
+  }
 
-    setFilteredProducts(result)
-  }, [searchQuery, selectedCategory, products])
+  if (searchQuery) {
+    result = result.filter(p =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }
+
+  setFilteredProducts(result)
+}, [searchQuery, selectedCategory, selectedSubCategory, products])
 
   return (
     <div className="bg-[#fcfaf8] min-h-screen font-sans">
@@ -95,25 +114,92 @@ export default function ProductCataloguePage() {
               </div>
             </div>
 
-            <div>
-              <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest mb-4">Collections</h3>
-              <ul className="space-y-2">
-                {CATEGORIES.map(cat => (
-                  <li key={cat}>
-                    <button 
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        selectedCategory === cat 
-                        ? 'bg-amber-700 text-white shadow-md' 
-                        : 'text-stone-600 hover:bg-stone-100'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+<div>
+  <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest mb-4">
+    Collections
+  </h3>
+
+  <ul className="space-y-4">
+    {CATEGORIES.map((cat) => (
+      <li key={cat}>
+        <button
+          onClick={() => {
+            setSelectedCategory(cat)
+            setSelectedSubCategory('All')
+          }}
+className={`w-full text-left text-sm font-bold transition-all duration-300 ${
+  selectedCategory === cat
+    ? 'text-[#3d2b1f] translate-x-1'
+    : 'text-stone-600 hover:text-amber-700 hover:translate-x-1'
+}`}
+        >
+          {cat}
+        </button>
+
+{selectedCategory === cat && cat !== 'All' && CATEGORY_MAP[cat]?.length > 0 && (
+          <ul className="mt-2 ml-4 space-y-1 border-l border-stone-200 pl-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            {CATEGORY_MAP[cat].map((sub) => (
+              <li key={sub}>
+                <button
+                  onClick={() => {
+                    setSelectedCategory(cat)
+                    setSelectedSubCategory(sub)
+                  }}
+                    className={`text-left text-sm transition-all duration-300 ${
+                      selectedCategory === cat && selectedSubCategory === sub
+                        ? 'text-amber-700 font-bold translate-x-1'
+                        : 'text-stone-500 hover:text-amber-700 hover:translate-x-1'
+                    }`}
+                >
+                  - {sub}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    ))}
+  </ul>
+</div>
+
+
+            {selectedCategory !== 'All' && CATEGORY_MAP[selectedCategory]?.length > 0 && (
+  <div>
+    <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest mb-4">
+      Sub Categories
+    </h3>
+
+    <ul className="space-y-2">
+      <li>
+        <button
+          onClick={() => setSelectedSubCategory('All')}
+          className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            selectedSubCategory === 'All'
+              ? 'bg-amber-700 text-white shadow-md'
+              : 'text-stone-600 hover:bg-stone-100'
+          }`}
+        >
+          All
+        </button>
+      </li>
+
+      {CATEGORY_MAP[selectedCategory].map(sub => (
+        <li key={sub}>
+          <button
+            onClick={() => setSelectedSubCategory(sub)}
+            className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              selectedSubCategory === sub
+                ? 'bg-amber-700 text-white shadow-md'
+                : 'text-stone-600 hover:bg-stone-100'
+            }`}
+          >
+            {sub}
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
           </aside>
 
           {/* Product Grid */}
@@ -122,13 +208,19 @@ export default function ProductCataloguePage() {
               <p className="text-stone-400 text-sm font-medium">
                 Showing <span className="text-[#3d2b1f] font-bold">{filteredProducts.length}</span> results
               </p>
-              <div className="flex items-center gap-2 text-stone-500">
-                <FiFilter size={14}/>
-                <span className="text-xs font-bold uppercase tracking-tighter">Refine View</span>
-              </div>
-            </div>
+<div className="flex items-center gap-2 text-stone-500">
+  <FiFilter size={14} />
+  <span className="text-xs font-bold uppercase tracking-tighter">
+    {selectedCategory === 'All'
+      ? 'All Collections'
+      : selectedSubCategory === 'All'
+      ? selectedCategory
+      : `${selectedCategory} / ${selectedSubCategory}`}
+  </span>
+</div>
+</div>
 
-            {loading ? (
+{loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {[1, 2, 3, 4, 5, 6].map(i => (
                   <div key={i} className="h-80 bg-stone-100 rounded-2xl animate-pulse" />
@@ -139,14 +231,16 @@ export default function ProductCataloguePage() {
                 <p className="text-stone-400 font-serif italic">No pieces found in this collection.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {filteredProducts.map(product => (
-                  <ProductCard
-                    key={product.id}
-                    name={product.name}
-                    price={product.price}
-                    image={product.image}
-                  />
+                  <Link key={product.id} href={`/products/${product.id}`}>
+                    <ProductCard
+                      name={product.name}
+                      price={product.price}
+                      image={product.image}
+                      description={product.description}
+                    />
+                  </Link>
                 ))}
               </div>
             )}
