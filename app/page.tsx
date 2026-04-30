@@ -196,29 +196,83 @@ export default function Home() {
   </div>
 </section>
 
-        {/* COLLECTIONS */}
-        <section className="bg-[#efe4d6] border-y border-[#dfcebf]">
-          <div className="max-w-7xl mx-auto px-6 md:px-10 py-16 md:py-20">
-            <div className="text-center mb-10">
-              <p className="text-[11px] uppercase tracking-[0.35em] text-[#9b7b5f] font-semibold mb-3">
-              Featured Collections
-            </p>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-[#2f241d] mb-4">
-              Crafted pieces for every space
-            </h2>
-            <p className="max-w-2xl mx-auto text-sm md:text-base leading-8 text-[#6d5a4c]">
-              A curated selection designed for elegant and comfortable interiors —
-              bringing together timeless tradition and everyday functionality.
-            </p>
-            </div>
+{/* WHAT WE DO */}
+<section className="bg-[#f8f2ea] border-y border-[#e2d4c6]">
+  <div className="max-w-7xl mx-auto px-6 md:px-10 py-16 md:py-24">
+  <div className="mb-14">
+    <p className="text-[11px] uppercase tracking-[0.35em] text-[#9b7b5f] font-semibold mb-3">
+      What We Do
+    </p>
+    <h2 className="text-3xl md:text-4xl font-serif font-bold text-[#2f241d]">
+      Craftsmanship for every space
+    </h2>
+  </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {categories.map((cat) => (
-                <CategoryCard key={cat} name={cat} />
-              ))}
-            </div>
-          </div>
-        </section>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-14 gap-y-16">
+    {[
+      {
+        title: 'Dining Room',
+        desc: 'We create dining room sets for the perfect dining ambience you have always wanted. Our dining sets give you comfort while sharing food, laughter, and memories with family and friends.',
+        link: '/products?category=Dining%20Room',
+      },
+      {
+        title: 'Living Room',
+        desc: 'Create the perfect haven for precious time together with your loved ones. Our living room furniture captures your home’s unique character with warmth and comfort.',
+        link: '/products?category=Living%20Room',
+      },
+      {
+        title: 'Bedroom',
+        desc: 'Turn your bedroom into a peaceful and meaningful space. Find pieces that bring calmness, elegance, and comfort into your personal retreat.',
+        link: '/products?category=Bedroom',
+      },
+      {
+        title: 'Cabinet',
+        desc: 'A cabinet is a perfect way to keep precious items visible yet protected. Our cabinet pieces combine storage, organization, and traditional charm.',
+        link: '/products?category=Cabinet',
+      },
+      {
+        title: 'Masjid',
+        desc: 'From delicate mimbars to sturdy portable rehals, we provide careful workmanship for masjid and surau furniture with durability, respect, and purpose.',
+        link: '/products?category=Masjid',
+      },
+      {
+        title: 'Others',
+        desc: 'We also produce custom woodwork products including baby cots, foldable rehals, Yasin storage, special projects, and other bespoke furniture pieces.',
+        link: '/products?category=Special%20Projects',
+      },
+    ].map((item, index) => (
+      <div
+        key={item.title}
+       
+       className="group relative bg-[#f8f2ea] text-[#2f241d] px-7 py-8 border border-[#e2d4c6] shadow-md transition-all duration-500 hover:bg-[#3d2b1f] hover:text-white hover:-translate-y-2 hover:shadow-2xl"
+      >
+      <div className="absolute -top-4 left-6 w-12 h-12 bg-[#e2d4c6] group-hover:bg-[#5a4233] transition-colors duration-300 shadow-md" />
+
+        <div className="relative">
+         <p className="text-xs text-[#9b7b5f] group-hover:text-amber-300 font-bold tracking-[0.25em] mb-4 transition-colors duration-300">
+            0{index + 1}
+          </p>
+
+         <h3 className="text-xl font-serif font-bold uppercase mb-4 transition-colors">
+            {item.title}
+          </h3>
+
+          <p className="text-sm leading-8 text-[#6d5a4c] group-hover:text-stone-200 mb-8 transition-colors duration-300">
+            {item.desc}
+          </p>
+
+          <Link
+            href={item.link}
+           className="text-xs font-bold uppercase tracking-[0.25em] text-[#c8752a] group-hover:text-amber-300 transition-colors duration-300"
+          >
+            Learn More →
+          </Link>
+        </div>
+      </div>
+    ))}
+  </div>
+  </div>
+</section>
 
         {/* FEATURED PRODUCTS */}
         <section className="max-w-7xl mx-auto px-6 md:px-10 py-16 md:py-24 space-y-16">
