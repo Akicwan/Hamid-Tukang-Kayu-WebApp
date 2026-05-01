@@ -34,6 +34,22 @@ export default function Home() {
   const [heroImages, setHeroImages] = useState<string[]>([])
 
   useEffect(() => {
+
+    const trackVisit = async () => {
+  const { error } = await supabase.from('page_visits').insert({
+    page: 'home',
+  })
+
+  if (error) {
+    console.error('Page visit tracking error:', error.message)
+  } else {
+    console.log('Homepage visit tracked')
+  }
+}
+
+trackVisit()
+
+
     async function fetchData() {
       setLoading(true)
 

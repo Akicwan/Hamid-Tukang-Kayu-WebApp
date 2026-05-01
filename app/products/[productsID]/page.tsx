@@ -27,6 +27,23 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+
+    const trackProductVisit = async () => {
+  const { error } = await supabase.from('product_visits').insert({
+    product_id: productsID,
+  })
+
+  if (error) {
+    console.error('Product visit tracking error:', error.message)
+  } else {
+    console.log('Product visit tracked:', productsID)
+  }
+}
+
+if (productsID) {
+  fetchProduct()
+  trackProductVisit()
+}
     async function fetchProduct() {
       setLoading(true)
 

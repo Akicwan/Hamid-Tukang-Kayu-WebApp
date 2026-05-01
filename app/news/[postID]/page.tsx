@@ -26,31 +26,44 @@ export default function NewsDetailPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
-    if (!postID) return
+useEffect(() => {
+  if (!postID) return
 
-    async function fetchData() {
-      setLoading(true)
+  const trackNewsVisit = async () => {
+    const { error } = await supabase.from('news_visits').insert({
+      post_id: postID.toString(),
+    })
 
-      const { data: postData, error: postError } = await supabase
-        .from('NewsEvent')
-        .select('*')
-        .eq('postID', postID)
-        .single()
-
-      const { data: recentData } = await supabase
-        .from('NewsEvent')
-        .select('*')
-        .order('date', { ascending: false })
-
-      if (!postError && postData) setPost(postData)
-      if (recentData) setRecentPosts(recentData)
-
-      setLoading(false)
+    if (error) {
+      console.error('News visit tracking error:', error.message)
+    } else {
+      console.log('News visit tracked:', postID)
     }
+  }
 
-    fetchData()
-  }, [postID])
+  async function fetchData() {
+    setLoading(true)
+
+    const { data: postData, error: postError } = await supabase
+      .from('NewsEvent')
+      .select('*')
+      .eq('postID', postID)
+      .single()
+
+    const { data: recentData } = await supabase
+      .from('NewsEvent')
+      .select('*')
+      .order('date', { ascending: false })
+
+    if (!postError && postData) setPost(postData)
+    if (recentData) setRecentPosts(recentData)
+
+    setLoading(false)
+  }
+
+  trackNewsVisit()
+  fetchData()
+}, [postID])
 
   const filteredRecentPosts = recentPosts
     .filter((item) => {
