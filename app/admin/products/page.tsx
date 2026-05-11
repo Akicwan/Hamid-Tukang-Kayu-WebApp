@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import AdminSidebar from '@/components/AdminSidebar'
 import { FiGrid, FiList, FiTrash2 } from 'react-icons/fi' 
 
+
 const CATEGORY_MAP: Record<string, string[]> = {
   "Dining Room": ["Dining Table", "Dining Chairs", "Dining Table Sets"],
   "Living Room": ["Coffee Table", "Sofa", "Console Table"],

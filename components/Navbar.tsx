@@ -25,8 +25,21 @@ export default function Navbar() {
             <div className="h-6 w-[1px] bg-stone-200 hidden md:block ml-2"></div>
           </Link>
 
+          
+
           {/* Navigation links */}
+
+
           <div className="hidden md:flex gap-8 text-[13px] font-bold uppercase tracking-widest">
+            <Link 
+              href="/" 
+              className={`transition-colors duration-300 ${isActive('/products') ? 'text-amber-700' : 'text-stone-500 hover:text-amber-700'}`}
+            >
+              home
+            </Link>
+
+
+
             <Link 
               href="/products" 
               className={`transition-colors duration-300 ${isActive('/products') ? 'text-amber-700' : 'text-stone-500 hover:text-amber-700'}`}
