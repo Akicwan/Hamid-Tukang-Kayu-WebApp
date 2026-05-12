@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
+import ProductCard from '../../../components/ProductCard'
 
 interface Product {
   id: string
@@ -25,6 +26,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedImage, setSelectedImage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
 
   useEffect(() => {
 
@@ -53,10 +55,21 @@ if (productsID) {
         .eq('id', productsID)
         .single()
 
-      if (!error && data) {
-        setProduct(data)
-        setSelectedImage(data.image)
-      }
+     if (!error && data) {
+  setProduct(data)
+  setSelectedImage(data.image)
+
+  const { data: relatedData } = await supabase
+    .from('products')
+    .select('*')
+    .eq('category', data.category)
+    .neq('id', data.id)
+    .limit(3)
+
+  if (relatedData) {
+    setRelatedProducts(relatedData)
+  }
+}
 
       setLoading(false)
     }
@@ -206,6 +219,43 @@ if (productsID) {
             </div>
           </aside>
         </div>
+        {/* RELATED PRODUCTS */}
+<section className="max-w-7xl mx-auto px-6 pb-20">
+  <div className="border-t border-stone-200 pt-14">
+    
+    <div className="mb-8">
+      <p className="text-[11px] uppercase tracking-[0.3em] text-[#9b7b5f] font-semibold mb-2">
+        You May Also Like
+      </p>
+
+      <h2 className="text-3xl font-serif font-bold text-[#2f241d]">
+        Related Products
+      </h2>
+    </div>
+
+    {relatedProducts.length > 0 ? (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {relatedProducts.map((item) => (
+          <Link
+            key={item.id}
+            href={`/products/${item.id}`}
+            className="block"
+          >
+            <ProductCard
+              name={item.name}
+              price={item.price}
+              image={item.image}
+            />
+          </Link>
+        ))}
+      </div>
+    ) : (
+      <p className="text-stone-500 italic">
+        No related products found.
+      </p>
+    )}
+  </div>
+</section>
       </main>
 
       <Footer />
