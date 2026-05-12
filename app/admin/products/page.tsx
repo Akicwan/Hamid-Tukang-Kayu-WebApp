@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import AdminSidebar from '@/components/AdminSidebar'
-import { FiGrid, FiList, FiTrash2 } from 'react-icons/fi' 
+import { FiGrid, FiList, FiTrash2 } from 'react-icons/fi'
+import AdminWrapper from '@/components/AdminWrapper' 
 
 
 const CATEGORY_MAP: Record<string, string[]> = {
@@ -326,7 +327,10 @@ const handleAdditionalImagesChange = (files: File[]) => {
 
         {/* Tab Controls */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-amber-900 tracking-tight">Product Management</h1>
+          <h1 className="text-4xl font-serif font-black text-[#3d2b1f] tracking-tight">
+            Product Management
+          </h1>
+          
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-amber-100">
             <button onClick={() => setActiveTab('view')} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'view' ? 'bg-amber-700 text-white shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}>View All</button>
             <button onClick={() => setActiveTab('add')} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'add' ? 'bg-amber-700 text-white shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}>Add New</button>

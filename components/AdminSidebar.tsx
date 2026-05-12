@@ -23,13 +23,7 @@ export default function AdminSidebar() {
           className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-2 border-amber-100 shadow-sm"
         />
         <h3 className="font-semibold text-lg text-[#3d2b1f] font-serif">Admin Portal</h3>
-        <button
-          onClick={() => router.push('/admin/profile')}
-          className="mt-3 flex items-center justify-center gap-2 text-sm text-amber-700 hover:text-amber-900 mx-auto transition-colors"
-        >
-          <FiEdit />
-          Edit Profile
-        </button>
+        
       </div>
 
       {/* Navigation */}

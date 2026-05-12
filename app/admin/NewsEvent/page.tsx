@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminWrapper from '@/components/AdminWrapper'
 import { FiPlus, FiSearch, FiEdit3, FiTrash2, FiCalendar } from 'react-icons/fi'
 
 interface NewsEvent {
@@ -320,7 +321,10 @@ const filteredPosts = posts.filter((post) => {
 
         {/* Tab Controls */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-amber-900 tracking-tight uppercase font-serif">News & Events</h1>
+          <h1 className="text-4xl font-serif font-black text-[#3d2b1f] tracking-tight">
+            News & Events Management
+          </h1>
+          
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-amber-100">
             <button onClick={() => setActiveTab('view')} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'view' ? 'bg-amber-700 text-white shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}>View Posts</button>
             <button onClick={() => { setActiveTab('add'); setEditingPost(null); resetForm(); }} className={`px-6 py-2 rounded-lg font-bold transition ${activeTab === 'add' ? 'bg-amber-700 text-white shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}>New Article</button>

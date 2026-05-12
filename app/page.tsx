@@ -324,16 +324,21 @@ trackVisit()
                           className="h-80 rounded-[2rem] bg-white animate-pulse border border-[#eaded2]"
                         />
                       ))
-                    : categoryProducts
-                        .slice(0, 3)
-                        .map((product) => (
-                          <ProductCard
-                            key={product.id}
-                            name={product.name}
-                            price={product.price}
-                            image={product.image}
-                          />
-                        ))}
+                   : categoryProducts
+                    .slice(0, 3)
+                    .map((product) => (
+                      <Link
+                        key={product.id}
+                        href={`/products/${product.id}`}
+                        className="block"
+                      >
+                        <ProductCard
+                          name={product.name}
+                          price={product.price}
+                          image={product.image}
+                        />
+                      </Link>
+                    ))}
                 </div>
               </section>
             )
