@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import AdminSidebar from '@/components/AdminSidebar'
-import AdminWrapper from '@/components/AdminWrapper'
+
 
 export default function SettingsPage() {
   const router = useRouter()

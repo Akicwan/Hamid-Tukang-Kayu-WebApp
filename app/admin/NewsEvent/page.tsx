@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import AdminSidebar from '@/components/AdminSidebar'
-import AdminWrapper from '@/components/AdminWrapper'
+
 import { FiPlus, FiSearch, FiEdit3, FiTrash2, FiCalendar } from 'react-icons/fi'
 
 interface NewsEvent {

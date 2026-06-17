@@ -104,7 +104,7 @@ trackVisit()
       <main>
         {/* HERO - FULL SCREEN */}
         <section className="relative min-h-screen flex items-center overflow-hidden bg-[#2e2118]">
-  <div className="absolute inset-0">
+  <div className="absolute inset-0">  
     <Slideshow images={heroImages} />
   </div>
 

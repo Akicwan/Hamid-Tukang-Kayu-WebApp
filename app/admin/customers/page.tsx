@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import AdminSidebar from '@/components/AdminSidebar'
 import { FiGrid, FiList, FiSearch, FiTrash2, FiEdit3 } from 'react-icons/fi' 
-import AdminWrapper from '@/components/AdminWrapper'
+
 
 const SERVICE_TYPES = [
   "Custom Furniture",

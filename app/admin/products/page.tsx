@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import AdminSidebar from '@/components/AdminSidebar'
 import { FiGrid, FiList, FiTrash2 } from 'react-icons/fi'
-import AdminWrapper from '@/components/AdminWrapper' 
+
 
 
 const CATEGORY_MAP: Record<string, string[]> = {
