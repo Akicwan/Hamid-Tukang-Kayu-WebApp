@@ -207,7 +207,7 @@ if (productsID) {
               )}
 
               <a
-                href={`https://wa.me/601111223922?text=${encodeURIComponent(
+                href={`https://wa.me/60162819826?text=${encodeURIComponent(
                   `Hi, I am interested in ${product.name}. Can I know more details?`
                 )}`}
                 target="_blank"
