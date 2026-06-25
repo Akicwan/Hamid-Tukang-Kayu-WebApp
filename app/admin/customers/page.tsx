@@ -1106,7 +1106,7 @@ const handleAddCustomer = async () => {
   if (!form.name.trim()) newErrors.push('name')
   if (!form.phone.trim()) newErrors.push('phone')
   if (!form.address.trim()) newErrors.push('address')
-  if (!form.transactionHistory.trim()) newErrors.push('history')
+  
 
   if (newErrors.length > 0) {
     setErrors(newErrors)
