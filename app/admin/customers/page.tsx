@@ -1100,6 +1100,47 @@ const handleUpdateCustomer = async () => {
   }
 }
 
+const handleDeleteCustomer = async () => {
+  if (!editingCustomer) return
+
+  const confirmed = window.confirm(
+    `Delete customer "${editingCustomer.name}"?\n\nThis action cannot be undone.`
+  )
+
+  if (!confirmed) return
+
+  setIsProcessing(true)
+
+  try {
+    // Optional: delete customer orders first
+    const { error: deleteOrdersError } = await supabase
+      .from('customer_orders')
+      .delete()
+      .eq('customer_id', editingCustomer.recordID)
+
+    if (deleteOrdersError) throw deleteOrdersError
+
+    // Delete customer record
+    const { error } = await supabase
+      .from('customerRecord')
+      .delete()
+      .eq('recordID', editingCustomer.recordID)
+
+    if (error) throw error
+
+    alert('Customer deleted successfully!')
+
+    setEditingCustomer(null)
+    resetForm()
+    fetchCustomers()
+
+  } catch (err: any) {
+    alert(err.message)
+  } finally {
+    setIsProcessing(false)
+  }
+}
+
 const handleAddCustomer = async () => {
   const newErrors: string[] = []
 
@@ -1650,10 +1691,39 @@ const balanceAmount = totalAmount - amountPaidNumber
                 
               </div>
 
-              <div className="mt-8 pt-6 border-t flex justify-end gap-4">
-                <button onClick={() => setEditingCustomer(null)} className="px-8 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition">Cancel</button>
-                <button onClick={handleUpdateCustomer} disabled={isProcessing} className={`px-12 py-3 rounded-xl font-bold text-white shadow-lg ${isProcessing ? 'bg-gray-300' : 'bg-amber-700 hover:bg-amber-800 transition-all'}`}>Save Updates</button>
-              </div>
+<div className="mt-8 pt-6 border-t flex justify-between">
+
+  {/* DELETE BUTTON */}
+  <button
+    onClick={handleDeleteCustomer}
+    disabled={isProcessing}
+    className="px-8 py-3 rounded-xl font-bold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition"
+  >
+    Delete Customer
+  </button>
+
+  <div className="flex gap-4">
+    <button
+      onClick={() => setEditingCustomer(null)}
+      className="px-8 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition"
+    >
+      Cancel
+    </button>
+
+    <button
+      onClick={handleUpdateCustomer}
+      disabled={isProcessing}
+      className={`px-12 py-3 rounded-xl font-bold text-white shadow-lg ${
+        isProcessing
+          ? 'bg-gray-300'
+          : 'bg-amber-700 hover:bg-amber-800 transition-all'
+      }`}
+    >
+      Save Updates
+    </button>
+  </div>
+
+</div>
             </div>
           </div>
         )}
