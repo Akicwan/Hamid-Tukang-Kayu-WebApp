@@ -140,7 +140,8 @@ const [orderItems, setOrderItems] = useState<OrderItemForm[]>([
 
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedService, setSelectedService] = useState('All')
+ const [filterOption, setFilterOption] = useState('All Records')
+const [sortOption, setSortOption] = useState('A-Z')
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [errors, setErrors] = useState<string[]>([])
 
@@ -1524,12 +1525,54 @@ const getCustomerTotalBalance = (customerId: string) => {
     .reduce((sum, order) => sum + Number(order.balance || 0), 0)
 }
 
-  const filteredCustomers = customers.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.phone.includes(searchQuery);
-    const matchesService = selectedService === 'All' || c.serviceType === selectedService;
-    return matchesSearch && matchesService;
-  });
+const filteredCustomers = customers
+  .filter((customer) => {
+    const matchesSearch =
+      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.phone.includes(searchQuery)
 
+    if (!matchesSearch) return false
+
+      const customerOrders = orders.filter(
+        (order) => order.customer_id === customer.recordID
+      )
+
+    switch (filterOption) {
+      case 'Has Orders':
+        return customerOrders.length > 0
+
+      case 'No Orders':
+        return customerOrders.length === 0
+
+      case 'Outstanding':
+        return getCustomerTotalBalance(customer.recordID) > 0
+
+      case 'Paid':
+        return getCustomerTotalBalance(customer.recordID) === 0
+
+      default:
+        return true
+    }
+  })
+  .sort((a, b) => {
+    switch (sortOption) {
+      case 'A-Z':
+        return a.name.localeCompare(b.name)
+
+      case 'Z-A':
+        return b.name.localeCompare(a.name)
+
+      case 'Recent':
+  return Number(b.recordID) - Number(a.recordID)
+
+case 'Oldest':
+  return Number(a.recordID) - Number(b.recordID)
+
+      default:
+        return 0
+    }
+  })
+  
 const totalAmount = orderItems.reduce(
   (sum, item) => sum + (Number(item.line_total) || 0),
   0
@@ -1561,8 +1604,8 @@ const balanceAmount = totalAmount - amountPaidNumber
 
         {/* EDIT MODAL POPUP - Matches Product Style */}
         {editingCustomer && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-3xl p-8 max-w-4xl w-full relative border border-amber-100 shadow-2xl">
+         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-3xl p-8 max-w-4xl w-full relative border border-amber-100 shadow-2xl mx-auto">
               <button onClick={() => setEditingCustomer(null)} className="absolute top-4 right-6 text-gray-400 hover:text-red-500 text-3xl">&times;</button>
               <h2 className="text-2xl font-bold text-amber-900 mb-6 border-b pb-4 uppercase tracking-tighter italic">Update Customer Data</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1604,15 +1647,7 @@ const balanceAmount = totalAmount - amountPaidNumber
             </div>
           </div>
 
-                <div className="space-y-6">
-                  <div><label className="text-xs font-bold text-amber-800 uppercase block mb-2">Service Type</label>
-                  <select className="w-full border p-3 border-gray-900 rounded-xl bg-white outline-none" value={form.serviceType} onChange={e => setForm({...form, serviceType: e.target.value})}>
-                    {SERVICE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                  </select></div>
-                  
-                  <div><label className="text-xs font-bold text-amber-800 uppercase block mb-2">Transaction/Project History</label>
-                  <textarea className="w-full border p-3 border-gray-900 rounded-xl h-32 mt-1 outline-none focus:ring-2 focus:ring-amber-500" value={form.transactionHistory} onChange={e => setForm({...form, transactionHistory: e.target.value})} /></div>
-                </div>
+                
               </div>
 
               <div className="mt-8 pt-6 border-t flex justify-end gap-4">
@@ -1639,53 +1674,104 @@ const balanceAmount = totalAmount - amountPaidNumber
         {activeTab === 'view' && (
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row gap-3 items-center w-full">
-              <select className="h-12 px-4 border border-amber-100 rounded-xl bg-white text-amber-900 font-semibold outline-none focus:ring-2 focus:ring-amber-500 shadow-sm min-w-[180px]" value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
-                <option value="All">All Services</option>
-                {SERVICE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+              <select
+                className="h-12 px-4 border border-amber-100 rounded-xl bg-white text-amber-900 font-semibold outline-none focus:ring-2 focus:ring-amber-500 shadow-sm min-w-[220px]"
+                value={filterOption}
+                onChange={(e) => setFilterOption(e.target.value)}
+              >
+                <option value="All Records">All Records</option>
+                <option value="Has Orders">Customers with Orders</option>
+                <option value="No Orders">Customers without Orders</option>
+                <option value="Outstanding">Outstanding Balance</option>
+                
               </select>
               <div className="relative flex-1 w-full">
                 <input type="text" placeholder="Search customer name or phone..." className="w-full h-12 pl-4 pr-4 bg-white border border-amber-100 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
+
+              <select
+                className="h-12 px-4 border border-amber-100 rounded-xl bg-white text-amber-900 font-semibold outline-none focus:ring-2 focus:ring-amber-500 shadow-sm min-w-[220px]"
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+              >
+                <option value="A-Z">Alphabetical (A-Z)</option>
+                <option value="Z-A">Alphabetical (Z-A)</option>
+                <option value="Recent">Recent First</option>
+                <option value="Oldest">Oldest First</option>
+              </select>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
                 <table className="w-full text-left">
                   <thead className="bg-amber-50 border-b border-amber-100">
-                    <tr>
-                      <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Customer Name</th>
-                      <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Phone</th>
-                      <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">
-                        Total Balance
-                      </th>
-                      <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest text-center">Action</th>
-                    </tr>
-                  </thead>
+  <tr>
+    <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">
+      Customer Name
+    </th>
+
+    <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">
+      Attention Person
+    </th>
+
+    <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">
+      Phone
+    </th>
+
+    <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">
+      Total Balance
+    </th>
+
+    <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest text-center">
+      Action
+    </th>
+  </tr>
+</thead>
                   <tbody>
                     {filteredCustomers.map(c => (
-                      <tr key={c.recordID} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                        <td className="p-4 font-bold text-sm text-[#3d2b1f]">{c.name}</td>
-                        <td className="p-4 text-sm text-gray-600 font-medium">{c.phone}</td>
-                       <td className="p-4 font-bold text-red-600 text-sm">
-                          RM {getCustomerTotalBalance(c.recordID).toFixed(2)}
-                        </td>
-                        <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-3">
-                          <button
-                            onClick={() => handleOpenCustomerDetails(c)}
-                            className="text-amber-700 font-bold text-xs hover:underline"
-                          >
-                            Orders
-                          </button>
+                      <tr
+  key={c.recordID}
+  className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+>
+  {/* Customer Name */}
+  <td className="p-4 font-bold text-sm text-[#3d2b1f]">
+    {c.name}
+  </td>
 
-                          <button
-                            onClick={() => openEditModal(c)}
-                            className="text-blue-600 font-bold text-xs hover:underline"
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      </td>
-                      </tr>
+  {/* Attention Person */}
+  <td className="p-4 text-sm text-gray-600 font-medium">
+    {c.attention_person || '-'}
+  </td>
+
+  {/* Phone */}
+  <td className="p-4 text-sm text-gray-600 font-medium">
+    {c.phone || '-'}
+  </td>
+
+  {/* Total Balance */}
+  <td className="p-4 font-bold text-red-600 text-sm">
+    RM {getCustomerTotalBalance(c.recordID).toFixed(2)}
+  </td>
+
+  {/* Actions */}
+  <td className="p-4 text-center">
+    <div className="flex items-center justify-center gap-3">
+      <button
+        onClick={() => handleOpenCustomerDetails(c)}
+        className="text-amber-700 font-bold text-xs hover:underline"
+      >
+        Orders
+      </button>
+
+      <button
+        onClick={() => openEditModal(c)}
+        className="text-blue-600 font-bold text-xs hover:underline"
+      >
+        Edit
+      </button>
+    </div>
+  </td>
+</tr>
+                      
                     ))}
                   </tbody>
                 </table>
@@ -1735,6 +1821,7 @@ const balanceAmount = totalAmount - amountPaidNumber
           <thead className="bg-amber-50 border-b border-amber-100">
            
           <tr>
+            <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Order Title</th>
             <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Date</th>
             <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">CPO No</th>
             <th className="p-4 text-xs font-bold text-amber-900 uppercase tracking-widest">Invoice No</th>
@@ -1749,6 +1836,7 @@ const balanceAmount = totalAmount - amountPaidNumber
             {selectedCustomerOrders.length > 0 ? (
               selectedCustomerOrders.map((order) => (
                 <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                  <td className="p-4 text-sm text-gray-700">{order.order_title || '-'}</td>
                   <td className="p-4 text-sm text-gray-700">{order.document_date || '-'}</td>
                   <td className="p-4 text-sm text-gray-700">{order.cpo_no || '-'}</td>
                   <td className="p-4 text-sm text-gray-700">{order.invoice_no || '-'}</td>
@@ -1768,7 +1856,7 @@ const balanceAmount = totalAmount - amountPaidNumber
     onClick={() => handleEditOrder(order)}
     className="px-3 py-1 rounded-lg bg-slate-600 text-white text-xs font-bold hover:bg-slate-700"
   >
-    Edit Order
+    Order Details
   </button>
 
   <button
@@ -1889,17 +1977,7 @@ const balanceAmount = totalAmount - amountPaidNumber
         />
       </div>
 
-        <div>
-          <label className="text-xs font-bold text-gray-400 uppercase">Amount Paid</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            className="w-full border p-3 border-gray-900 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-amber-500"
-            value={orderForm.amount_paid}
-            onChange={e => setOrderForm({ ...orderForm, amount_paid: e.target.value })}
-          />
-        </div>
+        
 
         <div>
           <label className="text-xs font-bold text-gray-400 uppercase">Bank Account Name</label>
@@ -2362,6 +2440,7 @@ const balanceAmount = totalAmount - amountPaidNumber
 
 
         {/* --- ADD CUSTOMER TAB - Exactly like Add Product --- */}
+        
         {activeTab === 'add' && (
           <div className="bg-white p-8 rounded-2xl shadow-md border border-amber-100 max-w-5xl mx-auto">
              <h2 className="text-2xl font-bold mb-6 text-amber-900 underline underline-offset-8 decoration-amber-200 uppercase tracking-tighter italic">Register New Customer</h2>
@@ -2411,15 +2490,7 @@ const balanceAmount = totalAmount - amountPaidNumber
               </div>
             </div>
                 
-                <div className="space-y-4">
-                  <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Primary Service Requested</label>
-                  <select className="w-full border border-gray-900 p-3 rounded-xl bg-white outline-none focus:ring-2 focus:ring-amber-500 mt-1" value={form.serviceType} onChange={e => setForm({...form, serviceType: e.target.value})}>
-                    {SERVICE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                  </select></div>
-
-                  <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Project/Transaction History</label>
-                  <textarea className={`w-full border p-3 rounded-xl h-32 mt-1 outline-none border-gray-900 transition-colors ${errors.includes('history') ? 'border-red-500 bg-red-50' : 'focus:ring-2 focus:ring-amber-500'}`} placeholder="Provide details of products ordered or services rendered..." value={form.transactionHistory} onChange={e => setForm({...form, transactionHistory: e.target.value})} /></div>
-                </div>
+                
              </div>
              <div className="mt-8 pt-6 border-t flex justify-end gap-4">
                 <button onClick={resetForm} className="px-8 py-4 rounded-xl font-bold text-gray-500 hover:bg-gray-100 border border-gray-200">Reset Form</button>
