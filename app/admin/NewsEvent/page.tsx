@@ -4,8 +4,17 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import AdminSidebar from '@/components/AdminSidebar'
+import {
+  FiPlus,
+  FiSearch,
+  FiEdit3,
+  FiTrash2,
+  FiCalendar,
+  FiGrid,
+  FiList
+} from 'react-icons/fi'
 
-import { FiPlus, FiSearch, FiEdit3, FiTrash2, FiCalendar } from 'react-icons/fi'
+
 
 interface NewsEvent {
   postID: string;
@@ -23,6 +32,7 @@ export default function NewsEventsPage() {
   const [posts, setPosts] = useState<NewsEvent[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterMonth, setFilterMonth] = useState('All')
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   
   // Modals & Form State
   const [showSuccessModal, setShowSuccessModal] = useState(false)
@@ -93,10 +103,23 @@ const [form, setForm] = useState({
   return uploadedUrls
 }
 
+const handleImageSelection = (files: File[]) => {
+  const combinedFiles = [...selectedFiles, ...files]
+
+  // Optional limit
+  const limitedFiles = combinedFiles.slice(0, 5)
+
+  if (combinedFiles.length > 5) {
+    alert('Maximum 5 images allowed.')
+  }
+
+  setSelectedFiles(limitedFiles)
+}
+
 const handleSavePost = async () => {
   const newErrors: string[] = []
   if (!form.title.trim()) newErrors.push('title')
-  if (!form.content.trim()) newErrors.push('content')
+  //if (!form.content.trim()) newErrors.push('content')
 
   if (newErrors.length > 0) {
     setErrors(newErrors)
@@ -272,18 +295,64 @@ const filteredPosts = posts.filter((post) => {
       type="file"
       multiple
       accept="image/*"
-      onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+    onChange={(e) =>
+  handleImageSelection(
+    Array.from(e.target.files || [])
+  )
+}
     />
 
-    <div className="grid grid-cols-3 gap-3 mt-4">
-      {existingImages.map((img, i) => (
-        <img key={i} src={img} className="h-24 object-cover rounded" />
-      ))}
+<div className="grid grid-cols-3 gap-3 mt-4">
 
-      {selectedFiles.map((file, i) => (
-        <img key={i} src={URL.createObjectURL(file)} className="h-24 object-cover rounded" />
-      ))}
+  {/* Existing Images */}
+  {existingImages.map((img, index) => (
+    <div key={index} className="relative group">
+
+      <img
+        src={img}
+        className="w-full h-24 object-cover rounded-xl border border-amber-100"
+      />
+
+      <button
+        type="button"
+        onClick={() =>
+          setExistingImages(
+            existingImages.filter((_, i) => i !== index)
+          )
+        }
+        className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition"
+      >
+        ✕
+      </button>
+
     </div>
+  ))}
+
+  {/* Newly Added Images */}
+  {selectedFiles.map((file, index) => (
+    <div key={index} className="relative group">
+
+      <img
+        src={URL.createObjectURL(file)}
+        className="w-full h-24 object-cover rounded-xl border border-amber-100"
+      />
+
+      <button
+        type="button"
+        onClick={() =>
+          setSelectedFiles(
+            selectedFiles.filter((_, i) => i !== index)
+          )
+        }
+        className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition"
+      >
+        ✕
+      </button>
+
+    </div>
+  ))}
+
+</div>
   </div>
 
 </div>
@@ -366,8 +435,33 @@ const filteredPosts = posts.filter((post) => {
       <option value="December">December</option>
     </select>
   </div>
+  <div className="flex bg-white p-1 rounded-xl border border-amber-100 shadow-sm w-fit">
+  <button
+    onClick={() => setViewMode('grid')}
+    className={`p-2 rounded-lg transition ${
+      viewMode === 'grid'
+        ? 'bg-amber-100 text-amber-700'
+        : 'text-gray-400'
+    }`}
+  >
+    <FiGrid size={20} />
+  </button>
 
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <button
+    onClick={() => setViewMode('table')}
+    className={`px-4 rounded-lg transition ${
+      viewMode === 'table'
+        ? 'bg-amber-100 text-amber-700'
+        : 'text-gray-400'
+    }`}
+  >
+    <FiList size={20} />
+  </button>
+</div>
+
+  {viewMode === 'grid' ? (
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 {filteredPosts.length === 0 ? (
   <div className="col-span-full bg-white rounded-2xl border border-amber-100 p-10 text-center text-stone-500 font-medium">
     No news or events found.
@@ -450,10 +544,95 @@ const filteredPosts = posts.filter((post) => {
     </div>
   ))
 )}
+</div>
+
+) : (
+
+<div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
+  <table className="w-full text-left">
+
+    <thead className="bg-amber-50 border-b border-amber-100">
+      <tr>
+        <th className="p-4 text-xs font-bold text-amber-900 uppercase">
+          Article
+        </th>
+
+        <th className="p-4 text-xs font-bold text-amber-900 uppercase">
+          Date
+        </th>
+
+        <th className="p-4 text-xs font-bold text-amber-900 uppercase">
+          Images
+        </th>
+
+        <th className="p-4 text-xs font-bold text-amber-900 uppercase text-center">
+          Action
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {filteredPosts.map(post => (
+        <tr
+          key={post.postID}
+          className="border-b border-gray-50 hover:bg-gray-50"
+        >
+          <td className="p-4">
+            <div className="flex items-center gap-3">
+
+              {post.image_urls?.[0] && (
+                <img
+                  src={post.image_urls[0]}
+                  className="w-14 h-14 rounded-lg object-cover"
+                />
+              )}
+
+          <div>
+            <p className="font-bold text-[#3d2b1f]">
+              {post.title}
+            </p>
           </div>
-          </div>
-        )}
-        
+
+            </div>
+          </td>
+
+          <td className="p-4">
+            {new Date(post.date).toLocaleDateString()}
+          </td>
+
+          <td className="p-4">
+            {post.image_urls?.length || 0} Images
+          </td>
+
+          <td className="p-4 text-center">
+            <button
+              onClick={() => {
+                setEditingPost(post)
+                setForm({
+                  title: post.title,
+                  content: post.content,
+                  date: post.date,
+                  fb_link: post.fb_link || ''
+                })
+                setExistingImages(post.image_urls || [])
+                setSelectedFiles([])
+              }}
+              className="text-amber-700 hover:underline font-bold"
+            >
+              Edit
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+
+</table>
+</div>
+
+)} {/* closes viewMode */}
+
+</div> 
+)} 
 
         {/* ADD / EDIT ARTICLE TAB */}
         {activeTab === 'add' && (
@@ -515,7 +694,11 @@ const filteredPosts = posts.filter((post) => {
     accept="image/*"
     multiple
     className="w-full text-sm"
-    onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+  onChange={(e) =>
+  handleImageSelection(
+    Array.from(e.target.files || [])
+  )
+}
   />
 
   {(existingImages.length > 0 || selectedFiles.length > 0) && (
@@ -523,7 +706,7 @@ const filteredPosts = posts.filter((post) => {
       {existingImages.length > 0 && (
         <div>
           <p className="text-[10px] font-bold text-stone-500 uppercase mb-2">
-            Existing Images
+            New Image Preview ({selectedFiles.length}/5)
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {existingImages.map((img, index) => (

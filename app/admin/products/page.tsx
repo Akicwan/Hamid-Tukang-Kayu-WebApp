@@ -91,8 +91,19 @@ export default function AdminProductsPage() {
 }
 
 const handleAdditionalImagesChange = (files: File[]) => {
-  setAdditionalImages(files)
-  setAdditionalImagePreviews(files.map(file => URL.createObjectURL(file)))
+  const combinedFiles = [...additionalImages, ...files]
+
+  const limitedFiles = combinedFiles.slice(0, 3)
+
+  if (combinedFiles.length > 3) {
+    alert('Maximum 3 gallery images allowed.')
+  }
+
+  setAdditionalImages(limitedFiles)
+
+  setAdditionalImagePreviews(
+    limitedFiles.map(file => URL.createObjectURL(file))
+  )
 }
 
   const openEditModal = (product: Product) => {
@@ -128,7 +139,17 @@ const handleAdditionalImagesChange = (files: File[]) => {
       }
     }
   }
+const removeExistingGalleryImage = (imageUrl: string) => {
+  if (!editingProduct) return
 
+  setEditingProduct({
+    ...editingProduct,
+    additional_images:
+      editingProduct.additional_images.filter(
+        img => img !== imageUrl
+      )
+  })
+}
   const handleUpdateProduct = async () => {
     if (!editingProduct) return;
     setIsUploading(true)
@@ -136,7 +157,9 @@ const handleAdditionalImagesChange = (files: File[]) => {
       let finalMainUrl = editingProduct.image;
       if (mainImage) finalMainUrl = await uploadImage(mainImage);
       
-      let finalAdditionalUrls = editingProduct.additional_images || [];
+     let finalAdditionalUrls = [
+  ...(editingProduct.additional_images || [])
+];
       if (additionalImages.length > 0) {
         const newUrls = await Promise.all(additionalImages.map(img => uploadImage(img)));
         finalAdditionalUrls = [...finalAdditionalUrls, ...newUrls];
@@ -212,7 +235,15 @@ const handleAdditionalImagesChange = (files: File[]) => {
         {editingProduct && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-3xl p-8 max-w-4xl w-full relative border border-amber-100 shadow-2xl">
-              <button onClick={() => setEditingProduct(null)} className="absolute top-4 right-6 text-gray-400 hover:text-red-500 text-3xl">&times;</button>
+              <button
+  onClick={() => {
+    setEditingProduct(null)
+    resetForm()
+  }}
+  className="absolute top-4 right-6 text-gray-400 hover:text-red-500 text-3xl"
+>
+  &times;
+</button>
               <h2 className="text-2xl font-bold text-amber-900 mb-6 border-b pb-4 uppercase tracking-tighter italic">Edit Product</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -279,11 +310,42 @@ const handleAdditionalImagesChange = (files: File[]) => {
       onChange={e => handleAdditionalImagesChange(Array.from(e.target.files || []))}
     />
 
-    {editingProduct.additional_images?.length > 0 && (
-      <p className="text-[10px] text-gray-500 mt-2 italic font-semibold uppercase">
-        Current Gallery: {editingProduct.additional_images.length} images
-      </p>
-    )}
+   {editingProduct.additional_images?.length > 0 && (
+  <div className="mt-4">
+    <p className="text-[10px] font-bold text-stone-500 uppercase mb-3">
+      Current Gallery Images
+    </p>
+
+    <div className="grid grid-cols-3 gap-3">
+
+      {editingProduct.additional_images.map((img, index) => (
+
+        <div
+          key={index}
+          className="relative group"
+        >
+
+          <img
+            src={img}
+            alt={`Gallery ${index + 1}`}
+            className="w-full h-24 object-cover rounded-xl border border-amber-100"
+          />
+
+          <button
+            type="button"
+            onClick={() => removeExistingGalleryImage(img)}
+            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600"
+          >
+            ✕
+          </button>
+
+        </div>
+
+      ))}
+
+    </div>
+  </div>
+)}
 
     {additionalImagePreviews.length > 0 && (
       <div className="mt-4">
@@ -317,7 +379,14 @@ const handleAdditionalImagesChange = (files: File[]) => {
                 </button>
 
                 <div className="flex gap-4">
-                  <button onClick={() => setEditingProduct(null)} className="px-8 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition">Cancel</button>
+                  <button
+  onClick={() => {
+    setEditingProduct(null)
+    resetForm()
+  }}
+>
+  Cancel
+</button>
                   <button onClick={handleUpdateProduct} disabled={isUploading} className={`px-12 py-3 rounded-xl font-bold text-white shadow-lg ${isUploading ? 'bg-gray-300' : 'bg-amber-700 hover:bg-amber-800 transition-all'}`}>Save Changes</button>
                 </div>
               </div>
@@ -364,15 +433,69 @@ const handleAdditionalImagesChange = (files: File[]) => {
                       <div className="flex items-center gap-4 mb-6"><h2 className="text-xl font-black text-amber-900 uppercase tracking-widest">{category}</h2><div className="h-[2px] flex-1 bg-amber-100 rounded-full"></div></div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {categoryProducts.map(p => (
-                          <div key={p.id} onClick={() => openEditModal(p)} className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden hover:border-amber-500 cursor-pointer group transition-all relative">
-                            <img src={p.image} className="w-full h-44 object-cover" alt={p.name} />
-                            <div className="p-4">
-                              <h3 className="font-bold text-gray-900 line-clamp-1">{p.name}</h3>
-                              <p className="text-amber-700 font-bold text-sm mt-1">RM {p.price}</p>
-                              <div className="mt-2"><span className="text-[9px] bg-gray-50 text-gray-400 px-2 py-0.5 rounded border border-gray-100">#{p.sub_category}</span></div>
-                              <div className="mt-4 pt-3 border-t flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">✎ Click to Edit</span></div>
-                            </div>
-                          </div>
+                          <div
+  key={p.id}
+  onClick={() => openEditModal(p)}
+  className="bg-white rounded-3xl overflow-hidden border border-amber-100 shadow-sm hover:shadow-xl hover:-translate-y-2 hover:border-amber-500 transition-all duration-300 cursor-pointer group"
+>
+  {/* Image */}
+  <div className="relative overflow-hidden">
+    <img
+      src={p.image}
+      alt={p.name}
+      className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500"
+    />
+
+    {/* Category Badge */}
+    <div className="absolute top-3 left-3">
+      <span className="bg-white/90 backdrop-blur-sm text-amber-900 text-[10px] font-bold uppercase px-3 py-1 rounded-full shadow">
+        {p.category}
+      </span>
+    </div>
+  </div>
+
+  {/* Content */}
+  <div className="p-5">
+
+    <h3 className="font-bold text-lg text-[#3d2b1f] line-clamp-1">
+      {p.name}
+    </h3>
+
+    <p className="text-xs text-stone-400 uppercase tracking-wider mt-1">
+      {p.sub_category}
+    </p>
+
+    <div className="mt-4 flex items-center justify-between">
+
+      <div>
+        <p className="text-[10px] uppercase text-stone-400 font-bold">
+          Price
+        </p>
+
+        <p className="text-xl font-black text-amber-700">
+          RM {Number(p.price).toLocaleString()}
+        </p>
+      </div>
+
+      <div className="text-right">
+        <p className="text-[10px] uppercase text-stone-400 font-bold">
+          Gallery
+        </p>
+
+        <p className="font-bold text-gray-700">
+          {p.additional_images?.length || 0} Photos
+        </p>
+      </div>
+
+    </div>
+
+    <div className="mt-5 pt-4 border-t border-amber-100">
+      <p className="text-center text-xs font-bold text-amber-700 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+        ✏ Click to Edit Product
+      </p>
+    </div>
+  </div>
+</div>
                         ))}
                       </div>
                     </section>
@@ -447,22 +570,33 @@ const handleAdditionalImagesChange = (files: File[]) => {
                     />
                   </div>
                 )}
-                 <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
-                   <label className="text-xs font-bold text-amber-800 uppercase block mb-2">Additional Gallery Images</label>
-                  <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="w-full text-sm"
-                      onChange={e => handleAdditionalImagesChange(Array.from(e.target.files || []))}
-                    />
-                 </div>
+             <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
+  <label className="text-xs font-bold text-amber-800 uppercase block mb-2">
+    Additional Gallery Images (Max 3)
+  </label>
+
+  <input
+    type="file"
+    accept="image/*"
+    multiple
+    className="w-full text-sm"
+    onChange={e =>
+      handleAdditionalImagesChange(
+        Array.from(e.target.files || [])
+      )
+    }
+  />
+
+  <p className="text-[10px] text-gray-500 mt-2">
+    Maximum 3 gallery images allowed.
+  </p>
+</div>
                  {additionalImagePreviews.length > 0 && (
                   <div className="mt-4">
                     <p className="text-[10px] font-bold text-stone-500 uppercase mb-2">
                       Gallery Preview ({additionalImagePreviews.length})
                     </p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                   <div className="grid grid-cols-3 gap-3">
                       {additionalImagePreviews.map((preview, index) => (
                         <img
                           key={index}

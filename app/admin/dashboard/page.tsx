@@ -42,6 +42,7 @@ export default function AdminDashboard() {
   const [totalNewsClicks, setTotalNewsClicks] = useState(0)
   const [topProducts, setTopProducts] = useState<RankedItem[]>([])
   const [topNews, setTopNews] = useState<RankedItem[]>([])
+  
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -157,20 +158,26 @@ if (newsVisitsError) console.error('News visits fetch error:', newsVisitsError.m
       productCount[visit.product_id] = (productCount[visit.product_id] || 0) + 1
     })
 
-    const rankedProducts = Object.entries(productCount)
-      .map(([id, views]) => {
-        const product = productsData?.find((p) => String(p.id) === String(id))
+const rankedProducts = Object.entries(productCount)
+  .reduce<RankedItem[]>((acc, [id, views]) => {
+    const product = productsData?.find(
+      (p) => String(p.id) === String(id)
+    )
 
-              return {
-          id,
-          title: product?.name || 'Unknown Product',
-          image: product?.image || '',
-          views,
-        }
+    if (product) {
+      acc.push({
+        id,
+        title: product.name,
+        image: product.image || '',
+        views,
       })
-      .sort((a, b) => b.views - a.views)
+    }
 
-    setTopProducts(rankedProducts)
+    return acc
+  }, [])
+  .sort((a, b) => b.views - a.views)
+
+setTopProducts(rankedProducts)
 
     const newsCount: Record<string, number> = {}
 
@@ -179,16 +186,22 @@ if (newsVisitsError) console.error('News visits fetch error:', newsVisitsError.m
     })
 
     const rankedNews = Object.entries(newsCount)
-      .map(([id, views]) => {
-        const post = newsData?.find((n) => n.postID === id)
+  .reduce<RankedItem[]>((acc, [id, views]) => {
+    const post = newsData?.find(
+      (n) => String(n.postID) === String(id)
+    )
 
-        return {
-          id,
-          title: post?.title || 'Unknown News/Event',
-          views,
-        }
+    if (post) {
+      acc.push({
+        id,
+        title: post.title,
+        views,
       })
-      .sort((a, b) => b.views - a.views)
+    }
+
+    return acc
+  }, [])
+  .sort((a, b) => b.views - a.views)
 
     setTopNews(rankedNews)
   }
@@ -326,19 +339,32 @@ if (newsVisitsError) console.error('News visits fetch error:', newsVisitsError.m
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-10">
           <section className="bg-white rounded-3xl shadow-md p-8 border border-amber-100">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-amber-50 text-amber-700 rounded-xl">
-                <FiTrendingUp />
-              </div>
-              <div>
-                <h2 className="text-xl font-serif font-bold text-[#3d2b1f]">
-                  Product Analysis
-                </h2>
-                <p className="text-xs text-stone-400 font-bold uppercase tracking-widest">
-                  Top 3 most viewed products
-                </p>
-              </div>
-            </div>
+<div className="flex justify-between items-center mb-6">
+  <div className="flex items-center gap-3">
+    <div className="p-3 bg-amber-50 text-amber-700 rounded-xl">
+      <FiTrendingUp />
+    </div>
+
+    <div>
+      <h2 className="text-xl font-serif font-bold text-[#3d2b1f]">
+        Product Analysis
+      </h2>
+
+      <p className="text-xs text-stone-400 font-bold uppercase tracking-widest">
+        Top 3 most viewed products
+      </p>
+    </div>
+  </div>
+
+  <button
+  onClick={() =>
+    router.push('/admin/product-analysis')
+  }
+  className="px-4 py-2 rounded-xl bg-[#3d2b1f] text-white text-sm hover:bg-amber-700 transition"
+>
+  View More
+</button>
+</div>
 
             <div className="space-y-4">
               {topProducts.length === 0 ? (
@@ -380,19 +406,34 @@ if (newsVisitsError) console.error('News visits fetch error:', newsVisitsError.m
           </section>
 
           <section className="bg-white rounded-3xl shadow-md p-8 border border-amber-100">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-green-50 text-green-700 rounded-xl">
-                <FiTrendingUp />
+           <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-green-50 text-green-700 rounded-xl">
+                  <FiTrendingUp />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-serif font-bold text-[#3d2b1f]">
+                    News & Event Analysis
+                  </h2>
+
+                  <p className="text-xs text-stone-400 font-bold uppercase tracking-widest">
+                    Top 3 most clicked news/events
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-serif font-bold text-[#3d2b1f]">
-                  News & Event Analysis
-                </h2>
-                <p className="text-xs text-stone-400 font-bold uppercase tracking-widest">
-                  Top 3 most clicked news/events
-                </p>
-              </div>
+
+              <button
+                onClick={() =>
+                  router.push('/admin/news-analysis')
+                }
+                className="px-4 py-2 rounded-xl bg-[#3d2b1f] text-white text-sm hover:bg-amber-700 transition"
+              >
+                View More
+              </button>
             </div>
+
+            
 
             <div className="space-y-4">
               {topNews.length === 0 ? (
