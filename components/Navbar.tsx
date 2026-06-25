@@ -62,12 +62,14 @@ export default function Navbar() {
         </div>
 
         {/* Contact CTA */}
-        <Link 
-          href="/contact" 
-          className="bg-[#3d2b1f] text-white px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-tighter hover:bg-stone-800 transition-all shadow-md"
-        >
-          Contact Us
-        </Link>
+<a
+  href="https://wa.me/60162819826"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="bg-[#3d2b1f] text-white px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-tighter hover:bg-stone-800 transition-all shadow-md"
+>
+  Contact Us
+</a>
 
       </div>
     </nav>
